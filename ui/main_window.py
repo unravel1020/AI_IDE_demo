@@ -1,22 +1,41 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QApplication,
-    QFileDialog, QMenuBar, QTabWidget
+    QFileDialog, QMenuBar, QTabWidget, QTextBrowser
 )
-from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import QThread, pyqtSignal, QUrl
+from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtWidgets import QTextEdit
 
 from analyzer.cpp_analyzer import CppAnalyzer
 from analyzer.code_fixer import CodeFixer
 from analyzer.code_agent import CodeAgent
 
-# 🔥 新增：IDE组件
 from ui.code_editor import CodeEditor
 from ui.cpp_highlighter import CppHighlighter
 
 import sys
 
 
+def highlight_lines(self, lines):
+    selections = []
+
+    for line_number in lines:
+        block = self.code_input.document().findBlockByLineNumber(line_number - 1)
+
+        if block.isValid():
+            cursor = self.code_input.textCursor()
+            cursor.setPosition(block.position())
+
+            extra = QTextEdit.ExtraSelection()
+            extra.cursor = cursor
+
+            # 🔥 红色高亮
+            extra.format.setBackground(QColor(255, 80, 80, 100))
+
+            selections.append(extra)
+
+    self.code_input.setExtraSelections(selections)
 # =========================
 # Worker线程
 # =========================
@@ -72,61 +91,48 @@ class AgentWorker(QThread):
 
 
 # =========================
-# 主窗口（IDE版）
+# 主窗口
 # =========================
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE（Agent版）")
+        self.setWindowTitle("AI C++ IDE（增强版）")
         self.resize(1300, 750)
 
-        # 核心模块
         self.analyzer = CppAnalyzer()
         self.fixer = CodeFixer()
         self.agent = CodeAgent()
 
         self.init_ui()
 
-    # =========================
-    # UI初始化
-    # =========================
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # ===== 菜单栏 =====
+        # ===== 菜单 =====
         menu_bar = QMenuBar()
         file_menu = menu_bar.addMenu("文件")
-
         file_menu.addAction("打开.cpp文件", self.open_file)
-        file_menu.addAction("保存分析结果", self.save_result)
-
+        file_menu.addAction("保存结果", self.save_result)
         layout.setMenuBar(menu_bar)
 
         # ===== 主布局 =====
         main_layout = QHBoxLayout()
 
-        # =========================
-        # 左：代码编辑器（🔥 行号 + 高亮）
-        # =========================
+        # 左：代码编辑器
         self.code_input = CodeEditor()
         self.code_input.setFont(QFont("Consolas", 11))
-        self.code_input.setStyleSheet("""
-            background-color: #1e1e1e;
-            color: #ffffff;
-        """)
+        self.code_input.setStyleSheet("background:#1e1e1e; color:white;")
 
-        # 🔥 启用语法高亮
         self.highlighter = CppHighlighter(self.code_input.document())
 
-        # =========================
-        # 右：Tab结果区（IDE核心）
-        # =========================
+        # ===== 右：Tab =====
         self.tabs = QTabWidget()
 
-        # 分析结果
-        self.tab_analysis = CodeEditor()
-        self.tab_analysis.setReadOnly(True)
+        # 🔥 分析结果（支持点击）
+        self.tab_analysis = QTextBrowser()
+        self.tab_analysis.setStyleSheet("background:#1e1e1e; color:white;")
+        self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
 
         # 修复代码
         self.tab_fix = CodeEditor()
@@ -136,13 +142,13 @@ class MainWindow(QWidget):
         self.tab_agent = CodeEditor()
         self.tab_agent.setReadOnly(True)
 
-        # 设置字体
-        for tab in [self.tab_analysis, self.tab_fix, self.tab_agent]:
+        for tab in [self.tab_fix, self.tab_agent]:
             tab.setFont(QFont("Consolas", 10))
-            tab.setStyleSheet("""
-                background-color: #1e1e1e;
-                color: #ffffff;
-            """)
+            tab.setStyleSheet("background:#1e1e1e; color:white;")
+
+        # 🔥 给所有代码窗口加高亮
+        self.highlighter_fix = CppHighlighter(self.tab_fix.document())
+        self.highlighter_agent = CppHighlighter(self.tab_agent.document())
 
         self.tabs.addTab(self.tab_analysis, "分析结果")
         self.tabs.addTab(self.tab_fix, "修复代码")
@@ -151,9 +157,7 @@ class MainWindow(QWidget):
         main_layout.addWidget(self.code_input)
         main_layout.addWidget(self.tabs)
 
-        # =========================
-        # 按钮区
-        # =========================
+        # ===== 按钮 =====
         btn_layout = QHBoxLayout()
 
         self.btn_analyze = QPushButton("分析")
@@ -174,7 +178,7 @@ class MainWindow(QWidget):
         self.setLayout(layout)
 
     # =========================
-    # 文件操作
+    # 文件
     # =========================
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -188,7 +192,6 @@ class MainWindow(QWidget):
         text = self.tab_analysis.toPlainText()
         if not text:
             return
-
         file_path, _ = QFileDialog.getSaveFileName(
             self, "保存结果", "", "Text Files (*.txt)"
         )
@@ -201,79 +204,111 @@ class MainWindow(QWidget):
     # =========================
     def on_analyze(self):
         code = self.code_input.toPlainText()
-
-        if not code.strip():
-            self.tab_analysis.setPlainText("请输入代码")
-            return
-
-        self.tab_analysis.setPlainText("🔍 分析中...")
-        self.btn_analyze.setEnabled(False)
+        self.tab_analysis.setHtml("<p>🔍 分析中...</p>")
 
         self.worker = AnalyzeWorker(self.analyzer, code)
         self.worker.finished.connect(self.show_analysis)
-        self.worker.error.connect(self.on_error)
         self.worker.start()
 
+    def highlight_lines(self, lines):
+        selections = []
+
+        for line_number in lines:
+            block = self.code_input.document().findBlockByLineNumber(line_number - 1)
+
+            if block.isValid():
+                cursor = self.code_input.textCursor()
+                cursor.setPosition(block.position())
+
+                extra = QTextEdit.ExtraSelection()
+                extra.cursor = cursor
+
+                # 🔥 红色高亮（IDE风格）
+                extra.format.setBackground(QColor(255, 80, 80, 100))
+
+                selections.append(extra)
+
+        self.code_input.setExtraSelections(selections)
+
     def show_analysis(self, result):
-        self.btn_analyze.setEnabled(True)
-        self.tab_analysis.setPlainText(str(result))
+        html = "<h3>分析结果</h3>"
+
+        lines_to_highlight = []
+        error_map = {}
+
+        for bug in result.get("bugs", []):
+            line = bug.get("line", -1)
+            desc = bug.get("desc", "")
+
+            if line > 0:
+                html += f'<p><a href="line:{line}">第{line}行</a> - {desc}</p>'
+                lines_to_highlight.append(line)
+
+                # 🔥 hover用
+                error_map[line] = desc
+            else:
+                html += f"<p>{desc}</p>"
+
+        self.tab_analysis.setHtml(html)
         self.tabs.setCurrentIndex(0)
+
+        # 🔥 自动标红
+        self.highlight_lines(lines_to_highlight)
+
+        # 🔥 传给编辑器（hover用）
+        self.code_input.error_map = error_map
+        self.code_input.update()
+        self.code_input.line_number_area.update()
+
+    # =========================
+    # 点击跳转
+    # =========================
+    def on_link_clicked(self, url: QUrl):
+        if url.toString().startswith("line:"):
+            line = int(url.toString().split(":")[1])
+            self.goto_line(line)
+
+    def goto_line(self, line_number):
+        cursor = self.code_input.textCursor()
+        block = self.code_input.document().findBlockByLineNumber(line_number - 1)
+
+        if not block.isValid():
+            return
+
+        cursor.setPosition(block.position())
+        self.code_input.setTextCursor(cursor)
+
+        selections = self.code_input.extraSelections()
+
+        current = QTextEdit.ExtraSelection()
+        current.cursor = cursor
+        current.format.setBackground(QColor(255, 255, 0, 120))
+
+        selections.append(current)
+
+        self.code_input.setExtraSelections(selections)
 
     # =========================
     # 修复
     # =========================
     def on_fix(self):
         code = self.code_input.toPlainText()
-
-        if not code.strip():
-            self.tab_fix.setPlainText("请输入代码")
-            return
-
-        self.tab_fix.setPlainText("🛠 修复中...")
-        self.btn_fix.setEnabled(False)
+        self.tab_fix.setPlainText("修复中...")
 
         self.worker = FixWorker(self.fixer, code)
-        self.worker.finished.connect(self.show_fix)
-        self.worker.error.connect(self.on_error)
+        self.worker.finished.connect(self.tab_fix.setPlainText)
         self.worker.start()
-
-    def show_fix(self, result):
-        self.btn_fix.setEnabled(True)
-        self.tab_fix.setPlainText(result)
-        self.tabs.setCurrentIndex(1)
 
     # =========================
     # Agent
     # =========================
     def on_agent(self):
         code = self.code_input.toPlainText()
-
-        if not code.strip():
-            self.tab_agent.setPlainText("请输入代码")
-            return
-
-        self.tab_agent.setPlainText("🧠 AI思考中...")
-        self.btn_agent.setEnabled(False)
+        self.tab_agent.setPlainText("AI思考中...")
 
         self.worker = AgentWorker(self.agent, code)
-        self.worker.finished.connect(self.show_agent)
-        self.worker.error.connect(self.on_error)
+        self.worker.finished.connect(self.tab_agent.setPlainText)
         self.worker.start()
-
-    def show_agent(self, result):
-        self.btn_agent.setEnabled(True)
-        self.tab_agent.setPlainText(result)
-        self.tabs.setCurrentIndex(2)
-
-    # =========================
-    # 错误处理
-    # =========================
-    def on_error(self, error_msg):
-        self.btn_analyze.setEnabled(True)
-        self.btn_fix.setEnabled(True)
-        self.btn_agent.setEnabled(True)
-
-        self.tab_analysis.setPlainText(f"❌ 错误：{error_msg}")
 
 
 # =========================
