@@ -20,6 +20,7 @@ from ui.diff_view import DiffView
 from ui.settings_dialog import SettingsDialog
 from ui.file_tree import FileTree
 from ui.find_dialog import FindDialog, SearchHighlighter
+from ui.snippet_panel import SnippetPanel
 
 import sys
 import os
@@ -160,7 +161,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.2.0")
+        self.setWindowTitle("AI C++ IDE v1.3.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -265,11 +266,17 @@ class MainWindow(QWidget):
         self.tab_history = QTextBrowser()
         self.tab_history.setStyleSheet("background:#1e1e1e; color:white;")
 
+        # 代码片段
+        self.tab_snippets = SnippetPanel()
+        self.tab_snippets.snippet_selected.connect(self.insert_snippet)
+        self.tab_snippets.setMaximumWidth(250)
+
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
         self.tabs.addTab(self.tab_fix, "🛠 修复代码")
         self.tabs.addTab(self.tab_diff, "🔍 对比")
         self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
         self.tabs.addTab(self.tab_history, "📜 历史")
+        self.tabs.addTab(self.tab_snippets, "📦 片段")
 
         main_layout.addWidget(left_splitter)
         main_layout.addWidget(self.tabs)
@@ -770,6 +777,13 @@ class MainWindow(QWidget):
     # =========================
     # 设置
     # =========================
+    def insert_snippet(self, code: str):
+        """插入代码片段到编辑器"""
+        cursor = self.code_input.textCursor()
+        cursor.insertText(code + "\n")
+        self.code_input.setTextCursor(cursor)
+        self.tabs.setCurrentIndex(0)  # 切换到编辑器
+
     def open_find_dialog(self):
         """打开查找对话框"""
         if self.find_dialog is not None:
