@@ -22,7 +22,10 @@ from ui.file_tree import FileTree
 from ui.find_dialog import FindDialog, SearchHighlighter
 from ui.snippet_panel import SnippetPanel
 from ui.terminal_widget import TerminalWidget
+from ui.plugin_panel import PluginPanel
 from themes.material_theme import get_colors
+
+from plugins.plugin_manager import PluginManager
 
 import sys
 import os
@@ -163,7 +166,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.5.0")
+        self.setWindowTitle("AI C++ IDE v1.6.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -206,6 +209,14 @@ class MainWindow(QWidget):
         format_menu.addAction("✨ 格式化代码 (默认风格)", lambda: self.format_code("default"))
         format_menu.addAction("✨ 格式化代码 (Google风格)", lambda: self.format_code("google"))
         format_menu.addAction("✨ 格式化代码 (LLVM风格)", lambda: self.format_code("llvm"))
+
+        # 插件菜单
+        plugin_menu = menu_bar.addMenu("🔌 插件")
+        plugin_menu.addAction("🔄 重载插件", self.reload_plugins)
+        plugin_menu.addSeparator()
+        # 动态添加插件菜单项
+        for item in self.plugin_manager.get_all_menu_items():
+            plugin_menu.addAction(item["name"], item["callback"])
 
         settings_menu = menu_bar.addMenu("设置")
         settings_menu.addAction("⚙️ 偏好设置", self.open_settings)
@@ -272,6 +283,14 @@ class MainWindow(QWidget):
         # 内置终端
         self.tab_terminal = TerminalWidget()
 
+        # 插件管理器
+        self.plugin_manager = PluginManager()
+        self.plugin_manager.set_main_window(self)
+        self.plugin_manager.load_all_plugins()
+
+        # 插件面板
+        self.tab_plugins = PluginPanel(self.plugin_manager)
+
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
         self.tabs.addTab(self.tab_fix, "🛠 修复代码")
         self.tabs.addTab(self.tab_diff, "🔍 对比")
@@ -279,6 +298,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.tab_history, "📜 历史")
         self.tabs.addTab(self.tab_snippets, "📦 片段")
         self.tabs.addTab(self.tab_terminal, "🖥️ 终端")
+        self.tabs.addTab(self.tab_plugins, "🔌 插件")
 
         main_layout.addWidget(left_splitter)
         main_layout.addWidget(self.tabs)
@@ -406,7 +426,20 @@ class MainWindow(QWidget):
         self.code_input.setExtraSelections(selections)
 
     def show_analysis(self, result):
+        # 调用插件 after_analyze 钩子
+        code = self.code_input.toPlainText()
+        result = self.plugin_manager.call_after_analyze(code, result)
+
         html = "<h3>📊 分析结果</h3>"
+
+        # 插件消息
+        if "_plugin_message" in result:
+            html += f'<p style="color:#69F0AE;">{result.pop("_plugin_message")}</p>'
+        if "_plugin_hello" in result:
+            html += f'<p style="color:#BB86FC;">{result.pop("_plugin_hello")}</p>'
+        if "_plugin_stats" in result:
+            stats = result.pop("_plugin_stats")
+            html += f'<p style="color:#03DAC6;">📊 代码: {stats["total_lines"]}行 | 函数: {stats["functions"]} | 注释: {stats["comment_ratio"]}%</p>'
 
         # 总结
         summary = result.get("summary", "")
@@ -886,6 +919,12 @@ class MainWindow(QWidget):
         self.auto_analyze_enabled = not self.auto_analyze_enabled
         status = "已开启" if self.auto_analyze_enabled else "已关闭"
         self.tab_analysis.setHtml(f"<p>🔄 实时分析 {status} (修改代码2秒后自动触发)</p>")
+
+    def reload_plugins(self):
+        """重新加载所有插件"""
+        self.plugin_manager.unload_all()
+        self.plugin_manager.load_all_plugins()
+        self.tab_analysis.setHtml(f"<p>✅ 插件已重载，共 {len(self.plugin_manager.plugins)} 个</p>")
 
     def open_settings(self):
         """打开设置对话框"""
