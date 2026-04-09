@@ -221,11 +221,9 @@ class MainWindow(QWidget):
         format_menu.addAction("✨ 格式化代码 (Google风格)", lambda: self.format_code("google"))
         format_menu.addAction("✨ 格式化代码 (LLVM风格)", lambda: self.format_code("llvm"))
 
-        # 插件菜单
         plugin_menu = menu_bar.addMenu("🔌 插件")
         plugin_menu.addAction("🔄 重载插件", self.reload_plugins)
         plugin_menu.addSeparator()
-        # 动态添加插件菜单项
         for item in self.plugin_manager.get_all_menu_items():
             plugin_menu.addAction(item["name"], item["callback"])
 
@@ -240,64 +238,97 @@ class MainWindow(QWidget):
         # ===== 主布局 =====
         main_layout = QHBoxLayout()
 
-        # 左侧面板：文件树 + 代码编辑器（使用分割器）
+        # ---- 左侧面板：文件树 + 编辑器 + 工具栏 ----
+        left_panel = QVBoxLayout()
+        left_panel.setContentsMargins(0, 0, 0, 0)
+        left_panel.setSpacing(6)
+
+        # 文件树 + 代码编辑器分割器
         left_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # 文件树
         self.file_tree = FileTree()
-        self.file_tree.setMaximumWidth(250)
+        self.file_tree.setMaximumWidth(240)
         self.file_tree.file_clicked.connect(self.load_file_from_tree)
 
-        # 代码编辑器
         self.code_input = CodeEditor()
         self.code_input.setFont(QFont("JetBrains Mono", 12))
         self.highlighter = CppHighlighter(self.code_input.document(), theme="light")
 
         left_splitter.addWidget(self.file_tree)
         left_splitter.addWidget(self.code_input)
-        left_splitter.setSizes([220, 900])
+        left_splitter.setSizes([200, 800])
+        left_splitter.setHandleWidth(3)
 
-        # ===== 右：Tab =====
+        left_panel.addWidget(left_splitter, 1)
+
+        # 工具栏：操作按钮
+        toolbar_layout = QHBoxLayout()
+        toolbar_layout.setSpacing(6)
+
+        self.btn_analyze = QPushButton("🔍 分析")
+        self.btn_fix = QPushButton("🛠 修复")
+        self.btn_agent = QPushButton("🧠 智能")
+        self.btn_format = QPushButton("✨ 格式化")
+        self.btn_batch = QPushButton("📑 批量")
+        self.btn_explain = QPushButton("📖 解释")
+
+        self.btn_analyze.setToolTip("分析代码 (Ctrl+R)")
+        self.btn_fix.setToolTip("修复代码 (Ctrl+Shift+H)")
+        self.btn_agent.setToolTip("AI 智能分析")
+        self.btn_explain.setToolTip("解释代码 (Ctrl+E)")
+        self.btn_format.setToolTip("格式化代码 (Ctrl+Shift+G)")
+        self.btn_batch.setToolTip("批量分析 (Ctrl+B)")
+
+        self.btn_analyze.clicked.connect(self.on_analyze)
+        self.btn_fix.clicked.connect(self.on_fix)
+        self.btn_agent.clicked.connect(self.on_agent)
+        self.btn_format.clicked.connect(lambda: self.format_code("default"))
+        self.btn_batch.clicked.connect(self.on_batch_analyze)
+        self.btn_explain.clicked.connect(self.on_explain)
+
+        toolbar_layout.addWidget(self.btn_analyze)
+        toolbar_layout.addWidget(self.btn_fix)
+        toolbar_layout.addWidget(self.btn_agent)
+        toolbar_layout.addWidget(self.btn_explain)
+        toolbar_layout.addWidget(self.btn_format)
+        toolbar_layout.addWidget(self.btn_batch)
+        toolbar_layout.addStretch()
+        left_panel.addLayout(toolbar_layout)
+
+        left_widget = QWidget()
+        left_widget.setLayout(left_panel)
+
+        # ---- 右侧面板：Tab + AI 对话 ----
         self.tabs = QTabWidget()
 
-        # 分析结果（支持点击）
         self.tab_analysis = QTextBrowser()
         self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
 
-        # 修复代码
         self.tab_fix = CodeEditor()
         self.tab_fix.setReadOnly(True)
 
-        # Agent输出
         self.tab_agent = CodeEditor()
         self.tab_agent.setReadOnly(True)
 
         for tab in [self.tab_fix, self.tab_agent]:
             tab.setFont(QFont("JetBrains Mono", 11))
 
-        # 给所有代码窗口加高亮
         self.highlighter_fix = CppHighlighter(self.tab_fix.document(), theme="light")
         self.highlighter_agent = CppHighlighter(self.tab_agent.document(), theme="light")
 
-        # 代码对比
         self.tab_diff = DiffView()
         self.tab_diff.set_highlighter(CppHighlighter, "both")
 
-        # 历史记录
         self.tab_history = QTextBrowser()
 
-        # 代码片段
         self.tab_snippets = SnippetPanel()
         self.tab_snippets.snippet_selected.connect(self.insert_snippet)
         self.tab_snippets.setMaximumWidth(250)
 
-        # 内置终端
         self.tab_terminal = TerminalWidget()
 
-        # 插件面板
         self.tab_plugins = PluginPanel(self.plugin_manager)
 
-        # AI 对话侧边栏
         self.chat_panel = ChatPanel()
 
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
@@ -309,22 +340,18 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.tab_terminal, "🖥️ 终端")
         self.tabs.addTab(self.tab_plugins, "🔌 插件")
 
-        # 右：Tab + AI 对话（水平分割）
         right_splitter = QSplitter(Qt.Orientation.Horizontal)
         right_splitter.addWidget(self.tabs)
         right_splitter.addWidget(self.chat_panel)
         right_splitter.setSizes([600, 400])
         right_splitter.setHandleWidth(3)
 
-        # 组装主布局：左面板 + 右面板
-        left_widget = QWidget()
-        left_widget.setLayout(left_panel)
         main_layout.addWidget(left_widget)
         main_layout.addWidget(right_splitter)
         main_layout.setStretch(0, 1)
         main_layout.setStretch(1, 1)
 
-        # ===== 进度标签（紧贴在底部按钮下方） =====
+        # ===== 进度标签 =====
         self.progress_label = QLabel("")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.progress_label.setStyleSheet("font-size: 13px; font-weight: 500; padding: 4px;")
