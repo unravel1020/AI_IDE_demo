@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / "core"))
 from API_Call_SDK_v1 import AIClient
 
 
@@ -9,7 +12,7 @@ class CodeAgent:
         return f"""
 你是一个高级C++代码审查Agent。
 
-请分析以下代码，并“自行决策”如何处理：
+请分析以下代码，并"自行决策"如何处理：
 
 {code}
 

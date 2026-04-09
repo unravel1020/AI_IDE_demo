@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QApplication,
-    QFileDialog, QMenuBar, QTabWidget, QTextBrowser
+    QFileDialog, QMenuBar, QTabWidget, QTextBrowser, QLabel
 )
-from PyQt6.QtCore import QThread, pyqtSignal, QUrl
+from PyQt6.QtCore import QThread, pyqtSignal, QUrl, Qt
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import QTextEdit
 
@@ -17,25 +17,6 @@ from ui.cpp_highlighter import CppHighlighter
 import sys
 
 
-def highlight_lines(self, lines):
-    selections = []
-
-    for line_number in lines:
-        block = self.code_input.document().findBlockByLineNumber(line_number - 1)
-
-        if block.isValid():
-            cursor = self.code_input.textCursor()
-            cursor.setPosition(block.position())
-
-            extra = QTextEdit.ExtraSelection()
-            extra.cursor = cursor
-
-            # 🔥 红色高亮
-            extra.format.setBackground(QColor(255, 80, 80, 100))
-
-            selections.append(extra)
-
-    self.code_input.setExtraSelections(selections)
 # =========================
 # Worker线程
 # =========================
@@ -97,7 +78,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE（增强版）")
+        self.setWindowTitle("AI C++ IDE v0.2.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -129,7 +110,7 @@ class MainWindow(QWidget):
         # ===== 右：Tab =====
         self.tabs = QTabWidget()
 
-        # 🔥 分析结果（支持点击）
+        # 分析结果（支持点击）
         self.tab_analysis = QTextBrowser()
         self.tab_analysis.setStyleSheet("background:#1e1e1e; color:white;")
         self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
@@ -146,7 +127,7 @@ class MainWindow(QWidget):
             tab.setFont(QFont("Consolas", 10))
             tab.setStyleSheet("background:#1e1e1e; color:white;")
 
-        # 🔥 给所有代码窗口加高亮
+        # 给所有代码窗口加高亮
         self.highlighter_fix = CppHighlighter(self.tab_fix.document())
         self.highlighter_agent = CppHighlighter(self.tab_agent.document())
 
@@ -160,8 +141,8 @@ class MainWindow(QWidget):
         # ===== 按钮 =====
         btn_layout = QHBoxLayout()
 
-        self.btn_analyze = QPushButton("分析")
-        self.btn_fix = QPushButton("修复")
+        self.btn_analyze = QPushButton("🔍 分析")
+        self.btn_fix = QPushButton("🛠 修复")
         self.btn_agent = QPushButton("🧠 智能")
 
         self.btn_analyze.clicked.connect(self.on_analyze)
@@ -175,7 +156,21 @@ class MainWindow(QWidget):
         layout.addLayout(main_layout)
         layout.addLayout(btn_layout)
 
+        # ===== 进度标签 =====
+        self.progress_label = QLabel("")
+        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.progress_label.setStyleSheet("color: #4EC9B0; font-size: 14px;")
+        layout.addWidget(self.progress_label)
+
         self.setLayout(layout)
+
+    # =========================
+    # 按钮状态管理
+    # =========================
+    def set_buttons_enabled(self, enabled: bool):
+        self.btn_analyze.setEnabled(enabled)
+        self.btn_fix.setEnabled(enabled)
+        self.btn_agent.setEnabled(enabled)
 
     # =========================
     # 文件
@@ -204,10 +199,17 @@ class MainWindow(QWidget):
     # =========================
     def on_analyze(self):
         code = self.code_input.toPlainText()
+        if not code.strip():
+            self.tab_analysis.setHtml("<p>请输入代码</p>")
+            return
+
+        self.set_buttons_enabled(False)
+        self.progress_label.setText("🔄 分析中...")
         self.tab_analysis.setHtml("<p>🔍 分析中...</p>")
 
         self.worker = AnalyzeWorker(self.analyzer, code)
         self.worker.finished.connect(self.show_analysis)
+        self.worker.error.connect(self.on_error)
         self.worker.start()
 
     def highlight_lines(self, lines):
@@ -223,7 +225,7 @@ class MainWindow(QWidget):
                 extra = QTextEdit.ExtraSelection()
                 extra.cursor = cursor
 
-                # 🔥 红色高亮（IDE风格）
+                # 红色高亮（IDE风格）
                 extra.format.setBackground(QColor(255, 80, 80, 100))
 
                 selections.append(extra)
@@ -231,34 +233,61 @@ class MainWindow(QWidget):
         self.code_input.setExtraSelections(selections)
 
     def show_analysis(self, result):
-        html = "<h3>分析结果</h3>"
+        html = "<h3>📊 分析结果</h3>"
+
+        # 总结
+        summary = result.get("summary", "")
+        complexity = result.get("complexity", "unknown")
+        if summary:
+            html += f'<p><b>📝 总结：</b>{summary}</p>'
+            html += f'<p><b>📈 复杂度：</b>{complexity}</p>'
+            html += '<hr>'
 
         lines_to_highlight = []
         error_map = {}
 
-        for bug in result.get("bugs", []):
-            line = bug.get("line", -1)
-            desc = bug.get("desc", "")
+        # 遍历所有问题类别
+        categories = [
+            ("🐛 Bugs", "bugs"),
+            ("🔒 安全问题", "security"),
+            ("🧵 线程问题", "thread_issues"),
+            ("💾 内存问题", "memory_issues"),
+            ("📖 可读性", "readability"),
+            ("🔧 可维护性", "maintainability"),
+            ("⚡ 性能", "performance"),
+            ("💡 优化建议", "suggestions")
+        ]
 
-            if line > 0:
-                html += f'<p><a href="line:{line}">第{line}行</a> - {desc}</p>'
-                lines_to_highlight.append(line)
+        for title, key in categories:
+            items = result.get(key, [])
+            if items:
+                html += f'<h4>{title}</h4>'
+                for item in items:
+                    line = item.get("line", -1)
+                    desc = item.get("desc", "")
+                    level = item.get("level", "medium")
+                    level_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(level, "⚪")
 
-                # 🔥 hover用
-                error_map[line] = desc
-            else:
-                html += f"<p>{desc}</p>"
+                    if line > 0:
+                        html += f'<p>{level_emoji} <a href="line:{line}">第{line}行</a> - {desc}</p>'
+                        lines_to_highlight.append(line)
+                        error_map[line] = desc
+                    else:
+                        html += f'<p>{level_emoji} {desc}</p>'
 
         self.tab_analysis.setHtml(html)
         self.tabs.setCurrentIndex(0)
 
-        # 🔥 自动标红
+        # 自动标红
         self.highlight_lines(lines_to_highlight)
 
-        # 🔥 传给编辑器（hover用）
+        # 传给编辑器（hover用）
         self.code_input.error_map = error_map
         self.code_input.update()
         self.code_input.line_number_area.update()
+
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
 
     # =========================
     # 点击跳转
@@ -293,22 +322,56 @@ class MainWindow(QWidget):
     # =========================
     def on_fix(self):
         code = self.code_input.toPlainText()
+        if not code.strip():
+            self.tab_fix.setPlainText("请输入代码")
+            return
+
+        self.set_buttons_enabled(False)
+        self.progress_label.setText("🔄 修复中...")
         self.tab_fix.setPlainText("修复中...")
 
         self.worker = FixWorker(self.fixer, code)
-        self.worker.finished.connect(self.tab_fix.setPlainText)
+        self.worker.finished.connect(self.show_fix)
+        self.worker.error.connect(self.on_error)
         self.worker.start()
+
+    def show_fix(self, result):
+        self.tab_fix.setPlainText(result)
+        self.tabs.setCurrentIndex(1)
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
 
     # =========================
     # Agent
     # =========================
     def on_agent(self):
         code = self.code_input.toPlainText()
+        if not code.strip():
+            self.tab_agent.setPlainText("请输入代码")
+            return
+
+        self.set_buttons_enabled(False)
+        self.progress_label.setText("🔄 AI思考中...")
         self.tab_agent.setPlainText("AI思考中...")
 
         self.worker = AgentWorker(self.agent, code)
-        self.worker.finished.connect(self.tab_agent.setPlainText)
+        self.worker.finished.connect(self.show_agent)
+        self.worker.error.connect(self.on_error)
         self.worker.start()
+
+    def show_agent(self, result):
+        self.tab_agent.setPlainText(result)
+        self.tabs.setCurrentIndex(2)
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
+
+    # =========================
+    # 错误处理
+    # =========================
+    def on_error(self, error_msg):
+        self.tab_analysis.setHtml(f'<p style="color:red;">❌ 错误：{error_msg}</p>')
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
 
 
 # =========================
