@@ -21,6 +21,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.file_tree import FileTree
 from ui.find_dialog import FindDialog, SearchHighlighter
 from ui.snippet_panel import SnippetPanel
+from ui.terminal_widget import TerminalWidget
 from themes.material_theme import get_colors
 
 import sys
@@ -162,7 +163,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.4.0")
+        self.setWindowTitle("AI C++ IDE v1.5.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -268,12 +269,16 @@ class MainWindow(QWidget):
         self.tab_snippets.snippet_selected.connect(self.insert_snippet)
         self.tab_snippets.setMaximumWidth(250)
 
+        # 内置终端
+        self.tab_terminal = TerminalWidget()
+
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
         self.tabs.addTab(self.tab_fix, "🛠 修复代码")
         self.tabs.addTab(self.tab_diff, "🔍 对比")
         self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
         self.tabs.addTab(self.tab_history, "📜 历史")
         self.tabs.addTab(self.tab_snippets, "📦 片段")
+        self.tabs.addTab(self.tab_terminal, "🖥️ 终端")
 
         main_layout.addWidget(left_splitter)
         main_layout.addWidget(self.tabs)
@@ -338,6 +343,7 @@ class MainWindow(QWidget):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 self.code_input.setPlainText(f.read())
+            self.tab_terminal.set_current_file(file_path)
         except Exception as e:
             self.tab_analysis.setHtml(f'<p style="color:red;">❌ 无法读取文件: {e}</p>')
 
@@ -348,6 +354,7 @@ class MainWindow(QWidget):
         if file_path:
             with open(file_path, "r", encoding="utf-8") as f:
                 self.code_input.setPlainText(f.read())
+            self.tab_terminal.set_current_file(file_path)
 
     def save_result(self):
         text = self.tab_analysis.toPlainText()
