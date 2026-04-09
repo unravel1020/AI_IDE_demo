@@ -2,7 +2,7 @@
 
 > 基于 PyQt6 和 Moonshot AI (Kimi) 构建的智能 C++ 代码分析、修复与可视化 IDE。
 > 
-> **当前版本：v1.3.0**
+> **当前版本：v1.4.0**
 
 ---
 
@@ -193,6 +193,17 @@ MIT License
 ---
 
 ## 📋 版本历史
+
+### v1.4.0 (2026-04-08)
+- ✨ **Material Design 3 主题**：全新深色主题，采用 Material You 设计规范
+- ✨ **现代化配色**：紫色主色调(#BB86FC)、青色强调色(#03DAC6)、12%背景灰度
+- ✨ **圆角设计**：按钮圆角20px、输入框圆角8px、菜单圆角8px、卡片圆角12px
+- ✨ **细滚动条**：8px圆角滚动条，hover时高亮，极简风格
+- ✨ **底部指示器标签页**：Tab选中时显示底部彩色指示线
+- ✨ **语法高亮升级**：采用 VS Code Dark+ 配色（紫色关键字、蓝色类型、绿色字符串）
+- ✨ **JetBrains Mono 字体**：代码编辑器使用 JetBrains Mono 字体，提升可读性
+- ✨ **主题系统**：`themes/material_theme.py` 支持 DARK/LIGHT 双主题配置
+- 📁 **新增模块**：`themes/material_theme.py` Material Design 主题系统
 
 ### v1.3.0 (2026-04-08)
 - ✨ **代码片段面板**：新增 `SnippetPanel`，支持常用代码模板快速插入

@@ -21,6 +21,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.file_tree import FileTree
 from ui.find_dialog import FindDialog, SearchHighlighter
 from ui.snippet_panel import SnippetPanel
+from themes.material_theme import get_colors
 
 import sys
 import os
@@ -161,7 +162,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.3.0")
+        self.setWindowTitle("AI C++ IDE v1.4.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -226,8 +227,7 @@ class MainWindow(QWidget):
 
         # 代码编辑器
         self.code_input = CodeEditor()
-        self.code_input.setFont(QFont("Consolas", 11))
-        self.code_input.setStyleSheet("background:#1e1e1e; color:white;")
+        self.code_input.setFont(QFont("JetBrains Mono", 12))
         self.highlighter = CppHighlighter(self.code_input.document())
 
         left_splitter.addWidget(self.file_tree)
@@ -239,7 +239,6 @@ class MainWindow(QWidget):
 
         # 分析结果（支持点击）
         self.tab_analysis = QTextBrowser()
-        self.tab_analysis.setStyleSheet("background:#1e1e1e; color:white;")
         self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
 
         # 修复代码
@@ -251,8 +250,7 @@ class MainWindow(QWidget):
         self.tab_agent.setReadOnly(True)
 
         for tab in [self.tab_fix, self.tab_agent]:
-            tab.setFont(QFont("Consolas", 10))
-            tab.setStyleSheet("background:#1e1e1e; color:white;")
+            tab.setFont(QFont("JetBrains Mono", 11))
 
         # 给所有代码窗口加高亮
         self.highlighter_fix = CppHighlighter(self.tab_fix.document())
@@ -264,7 +262,6 @@ class MainWindow(QWidget):
 
         # 历史记录
         self.tab_history = QTextBrowser()
-        self.tab_history.setStyleSheet("background:#1e1e1e; color:white;")
 
         # 代码片段
         self.tab_snippets = SnippetPanel()
@@ -311,7 +308,7 @@ class MainWindow(QWidget):
         # ===== 进度标签 =====
         self.progress_label = QLabel("")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.progress_label.setStyleSheet("color: #4EC9B0; font-size: 14px;")
+        self.progress_label.setStyleSheet("color: #03DAC6; font-size: 14px; font-weight: 500;")
         layout.addWidget(self.progress_label)
 
         self.setLayout(layout)
@@ -955,7 +952,7 @@ class MainWindow(QWidget):
     def init_status_bar(self):
         """初始化状态栏"""
         self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("color: #858585; padding: 4px;")
+        self.status_label.setStyleSheet("color: #A0A0A0; padding: 6px 12px; font-size: 12px;")
         # 状态栏添加到布局底部
         self.layout().addWidget(self.status_label)
 
