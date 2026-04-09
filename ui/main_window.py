@@ -176,7 +176,14 @@ class MainWindow(QWidget):
         self.formatter = CodeFormatter()
         self.explainer = CodeExplainer()
 
-        # 搜索高亮器
+        # 插件管理器（必须在 init_ui 之前创建，因为 init_ui 中的菜单需要使用）
+        self.plugin_manager = PluginManager()
+        self.plugin_manager.set_main_window(self)
+        self.plugin_manager.load_all_plugins()
+
+        self.init_ui()
+
+        # 搜索高亮器（必须在 init_ui 之后，因为 code_input 在 init_ui 中创建）
         self.search_highlighter = SearchHighlighter(self.code_input)
         self.find_dialog = None
 
@@ -186,7 +193,6 @@ class MainWindow(QWidget):
         self.auto_analyze_timer.setSingleShot(True)
         self.auto_analyze_timer.timeout.connect(self.on_auto_analyze)
 
-        self.init_ui()
         self.init_shortcuts()
         self.init_status_bar()
         self.init_auto_analyze()
@@ -283,11 +289,6 @@ class MainWindow(QWidget):
 
         # 内置终端
         self.tab_terminal = TerminalWidget()
-
-        # 插件管理器
-        self.plugin_manager = PluginManager()
-        self.plugin_manager.set_main_window(self)
-        self.plugin_manager.load_all_plugins()
 
         # 插件面板
         self.tab_plugins = PluginPanel(self.plugin_manager)
