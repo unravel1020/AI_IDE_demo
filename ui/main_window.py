@@ -19,6 +19,7 @@ from ui.cpp_highlighter import CppHighlighter
 from ui.diff_view import DiffView
 from ui.settings_dialog import SettingsDialog
 from ui.file_tree import FileTree
+from ui.find_dialog import FindDialog, SearchHighlighter
 
 import sys
 import os
@@ -159,7 +160,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.0.0")
+        self.setWindowTitle("AI C++ IDE v1.1.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -167,6 +168,10 @@ class MainWindow(QWidget):
         self.agent = CodeAgent()
         self.formatter = CodeFormatter()
         self.explainer = CodeExplainer()
+
+        # 搜索高亮器
+        self.search_highlighter = SearchHighlighter(self.code_input)
+        self.find_dialog = None
 
         self.init_ui()
         self.init_shortcuts()
@@ -756,6 +761,83 @@ class MainWindow(QWidget):
     # =========================
     # 设置
     # =========================
+    def open_find_dialog(self):
+        """打开查找对话框"""
+        if self.find_dialog is not None:
+            self.find_dialog.close()
+        self.find_dialog = FindDialog(self, replace_mode=False)
+        # 如果有选中文本，预填充
+        selected = self.code_input.textCursor().selectedText()
+        if selected:
+            self.find_dialog.set_find_text(selected)
+        self.find_dialog.find_next.connect(self.on_find_next)
+        self.find_dialog.find_prev.connect(self.on_find_prev)
+        self.find_dialog.finished.connect(self.on_find_dialog_closed)
+        self.find_dialog.show()
+
+    def open_replace_dialog(self):
+        """打开替换对话框"""
+        if self.find_dialog is not None:
+            self.find_dialog.close()
+        self.find_dialog = FindDialog(self, replace_mode=True)
+        selected = self.code_input.textCursor().selectedText()
+        if selected:
+            self.find_dialog.set_find_text(selected)
+        self.find_dialog.find_next.connect(self.on_find_next)
+        self.find_dialog.find_prev.connect(self.on_find_prev)
+        self.find_dialog.replace_one.connect(self.on_replace_one)
+        self.find_dialog.replace_all.connect(self.on_replace_all)
+        self.find_dialog.finished.connect(self.on_find_dialog_closed)
+        self.find_dialog.show()
+
+    def on_find_next(self, text: str, case_sensitive: bool, use_regex: bool):
+        """查找下一个"""
+        self.search_highlighter.highlight_all(text, case_sensitive, use_regex)
+        found = self.search_highlighter.find_next(text, case_sensitive, use_regex)
+        if not found and self.find_dialog:
+            self.find_dialog.setWindowTitle(f"未找到: {text}")
+        elif self.find_dialog:
+            self.find_dialog.setWindowTitle("替换" if self.find_dialog.replace_mode else "查找")
+
+    def on_find_prev(self, text: str, case_sensitive: bool, use_regex: bool):
+        """查找上一个"""
+        self.search_highlighter.highlight_all(text, case_sensitive, use_regex)
+        found = self.search_highlighter.find_prev(text, case_sensitive, use_regex)
+        if not found and self.find_dialog:
+            self.find_dialog.setWindowTitle(f"未找到: {text}")
+        elif self.find_dialog:
+            self.find_dialog.setWindowTitle("替换" if self.find_dialog.replace_mode else "查找")
+
+    def on_replace_one(self, old: str, new: str, case_sensitive: bool, use_regex: bool):
+        """替换当前匹配"""
+        cursor = self.code_input.textCursor()
+        if cursor.hasSelection() and cursor.selectedText() == old:
+            cursor.insertText(new)
+        else:
+            self.on_find_next(old, case_sensitive, use_regex)
+            cursor = self.code_input.textCursor()
+            if cursor.hasSelection():
+                cursor.insertText(new)
+        self.on_find_next(old, case_sensitive, use_regex)
+
+    def on_replace_all(self, old: str, new: str, case_sensitive: bool, use_regex: bool):
+        """替换全部匹配"""
+        content = self.code_input.toPlainText()
+        flags = 0 if case_sensitive else 2  # re.IGNORECASE
+        import re
+        pattern = re.escape(old) if not use_regex else old
+        count = len(re.findall(pattern, content, flags))
+        new_content = re.sub(pattern, new, content, flags=flags)
+        self.code_input.setPlainText(new_content)
+        self.search_highlighter.clear()
+        if self.find_dialog:
+            self.find_dialog.setWindowTitle(f"已替换 {count} 处")
+
+    def on_find_dialog_closed(self):
+        """查找对话框关闭时清除高亮"""
+        self.search_highlighter.clear()
+        self.find_dialog = None
+
     def open_settings(self):
         """打开设置对话框"""
         dialog = SettingsDialog(self)
@@ -813,6 +895,14 @@ class MainWindow(QWidget):
         # Ctrl+Shift+R: 批量分析
         shortcut_batch = QShortcut(QKeySequence("Ctrl+Shift+R"), self)
         shortcut_batch.activated.connect(self.on_batch_analyze)
+
+        # Ctrl+F: 查找
+        shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self)
+        shortcut_find.activated.connect(self.open_find_dialog)
+
+        # Ctrl+H: 替换
+        shortcut_replace = QShortcut(QKeySequence("Ctrl+H"), self)
+        shortcut_replace.activated.connect(self.open_replace_dialog)
 
     # =========================
     # 状态栏
