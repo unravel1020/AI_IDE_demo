@@ -4,7 +4,7 @@ Material Design 3 (Material You) 主题系统
 """
 
 # =========================
-# Material Design 3 配色
+# Material Design 3 配色 - 柔和浅色主题
 # =========================
 
 # 深色主题 (Dark Theme)
@@ -20,58 +20,58 @@ DARK = {
     "secondary_container": "#004D40",
     "on_secondary": "#000000",
     "error": "#CF6679",
-    "error_container": "#8B0000",
     "on_surface": "#E0E0E0",
     "on_surface_variant": "#A0A0A0",
     "outline": "#494949",
     "outline_variant": "#333333",
-    "divider": "#1FFFFFFF",
-    "shadow": "#000000",
-    "scrim": "#000000",
-    "inverse_surface": "#E0E0E0",
-    "inverse_on_surface": "#121212",
     "code_bg": "#1E1E1E",
     "code_line_number_bg": "#1A1A1A",
-    "code_line_number_fg": "#606060",
     "tab_selected": "#BB86FC",
     "tab_unselected": "#808080",
 }
 
-# 浅色主题 (Light Theme)
+# 浅色主题 (Light Theme) - 柔和护眼配色
 LIGHT = {
-    "background": "#F5F5F5",
+    # 背景 - 温暖的米白色，不刺眼
+    "background": "#F7F5F0",
     "surface": "#FFFFFF",
-    "surface_variant": "#F0F0F0",
-    "surface_highlight": "#E8E8E8",
-    "primary": "#6750A4",
-    "primary_container": "#EADDFF",
+    "surface_variant": "#F0EDE8",
+    "surface_highlight": "#E8E4DD",
+
+    # 主色调 - 柔和的蓝紫色
+    "primary": "#5B6BB8",
+    "primary_container": "#E8EBF7",
     "on_primary": "#FFFFFF",
-    "secondary": "#625B71",
-    "secondary_container": "#E8DEF8",
+
+    # 次要色 - 柔和的青色
+    "secondary": "#4A9B9B",
+    "secondary_container": "#E0F0F0",
     "on_secondary": "#FFFFFF",
-    "error": "#B3261E",
-    "error_container": "#F9DEDC",
-    "on_surface": "#1C1B1F",
-    "on_surface_variant": "#49454F",
-    "outline": "#79747E",
-    "outline_variant": "#CAC4D0",
-    "divider": "#1F000000",
-    "shadow": "#000000",
-    "scrim": "#000000",
-    "inverse_surface": "#313033",
-    "inverse_on_surface": "#F4EFF4",
-    "code_bg": "#FAFAFA",
-    "code_line_number_bg": "#F0F0F0",
-    "code_line_number_fg": "#999999",
-    "tab_selected": "#6750A4",
-    "tab_unselected": "#666666",
+
+    # 错误色 - 柔和的砖红
+    "error": "#C45B5B",
+    "error_container": "#F9E5E5",
+
+    # 文字 - 深灰而非纯黑，更柔和
+    "on_surface": "#3D3D3D",
+    "on_surface_variant": "#6B6B6B",
+
+    # 边框 - 浅灰色
+    "outline": "#D0CCC5",
+    "outline_variant": "#E5E1DA",
+
+    # 代码编辑器 - 暖白色背景
+    "code_bg": "#FDFCF8",
+    "code_line_number_bg": "#F0EDE8",
+
+    # 标签页
+    "tab_selected": "#5B6BB8",
+    "tab_unselected": "#8A8A8A",
 }
 
 
 def generate_qss(colors: dict) -> str:
-    """
-    根据颜色配置生成 QSS 样式表
-    """
+    """根据颜色配置生成 QSS 样式表"""
     c = colors
 
     return f"""
@@ -86,86 +86,96 @@ def generate_qss(colors: dict) -> str:
     }}
 
     /* ========================= */
+    /* 主窗口 */
+    /* ========================= */
+    QMainWindow, QWidget {{
+        background-color: {c['background']};
+    }}
+
+    /* ========================= */
     /* QMenuBar */
     /* ========================= */
     QMenuBar {{
         background-color: {c['surface']};
         color: {c['on_surface']};
-        padding: 4px 8px;
+        padding: 2px 8px;
         border-bottom: 1px solid {c['outline_variant']};
+        min-height: 28px;
     }}
     QMenuBar::item {{
         background-color: transparent;
-        padding: 6px 12px;
+        padding: 4px 10px;
         border-radius: 4px;
+        font-size: 12px;
     }}
     QMenuBar::item:selected {{
         background-color: {c['surface_highlight']};
-    }}
-    QMenuBar::item:pressed {{
-        background-color: {c['surface_variant']};
     }}
 
     /* ========================= */
     /* QMenu */
     /* ========================= */
     QMenu {{
-        background-color: {c['surface_variant']};
+        background-color: {c['surface']};
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
-        border-radius: 8px;
-        padding: 6px;
+        border-radius: 6px;
+        padding: 4px;
     }}
     QMenu::item {{
-        padding: 8px 24px;
+        padding: 6px 20px;
         border-radius: 4px;
+        font-size: 12px;
     }}
     QMenu::item:selected {{
-        background-color: {c['surface_highlight']};
+        background-color: {c['primary_container']};
+        color: {c['primary']};
     }}
     QMenu::separator {{
         height: 1px;
         background-color: {c['outline_variant']};
-        margin: 6px 12px;
+        margin: 4px 8px;
     }}
 
     /* ========================= */
-    /* QPushButton - Material Button */
+    /* QPushButton */
     /* ========================= */
     QPushButton {{
-        background-color: {c['primary_container']};
-        color: {c['primary']};
-        border: none;
-        border-radius: 20px;
-        padding: 8px 20px;
+        background-color: {c['surface_variant']};
+        color: {c['on_surface']};
+        border: 1px solid {c['outline_variant']};
+        border-radius: 6px;
+        padding: 6px 14px;
         font-weight: 500;
         font-size: 12px;
-        letter-spacing: 0.5px;
     }}
     QPushButton:hover {{
-        background-color: {c['primary']};
-        color: {c['on_primary']};
+        background-color: {c['primary_container']};
+        color: {c['primary']};
+        border-color: {c['primary']};
     }}
     QPushButton:pressed {{
         background-color: {c['primary']};
-        opacity: 0.8;
+        color: {c['on_primary']};
     }}
     QPushButton:disabled {{
         background-color: {c['surface_variant']};
         color: {c['on_surface_variant']};
+        border-color: {c['outline_variant']};
     }}
 
     /* ========================= */
-    /* QTabWidget - Material Tabs */
+    /* QTabWidget */
     /* ========================= */
     QTabWidget::pane {{
-        border: none;
+        border: 1px solid {c['outline_variant']};
+        border-radius: 8px;
         background-color: {c['surface']};
     }}
     QTabBar::tab {{
         background-color: transparent;
         color: {c['on_surface_variant']};
-        padding: 10px 16px;
+        padding: 8px 14px;
         border: none;
         border-bottom: 2px solid transparent;
         font-size: 12px;
@@ -174,32 +184,32 @@ def generate_qss(colors: dict) -> str:
     QTabBar::tab:selected {{
         color: {c['tab_selected']};
         border-bottom: 2px solid {c['tab_selected']};
+        background-color: {c['primary_container']};
+        border-radius: 4px 4px 0 0;
     }}
     QTabBar::tab:hover:!selected {{
         color: {c['on_surface']};
         background-color: {c['surface_highlight']};
+        border-radius: 4px 4px 0 0;
     }}
 
     /* ========================= */
     /* QLineEdit */
     /* ========================= */
     QLineEdit {{
-        background-color: {c['surface_variant']};
+        background-color: {c['surface']};
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
-        border-radius: 8px;
-        padding: 8px 12px;
+        border-radius: 6px;
+        padding: 6px 10px;
         font-size: 13px;
     }}
     QLineEdit:focus {{
         border: 2px solid {c['primary']};
     }}
-    QLineEdit::placeholder {{
-        color: {c['on_surface_variant']};
-    }}
 
     /* ========================= */
-    /* QTextEdit / QPlainTextEdit */
+    /* QTextEdit / QPlainTextEdit - 代码编辑器 */
     /* ========================= */
     QTextEdit, QPlainTextEdit {{
         background-color: {c['code_bg']};
@@ -224,10 +234,10 @@ def generate_qss(colors: dict) -> str:
         background-color: {c['outline_variant']};
     }}
     QSplitter::handle:horizontal {{
-        width: 2px;
+        width: 3px;
     }}
     QSplitter::handle:vertical {{
-        height: 2px;
+        height: 3px;
     }}
     QSplitter::handle:hover {{
         background-color: {c['primary']};
@@ -238,12 +248,12 @@ def generate_qss(colors: dict) -> str:
     /* ========================= */
     QScrollBar:vertical {{
         background-color: transparent;
-        width: 8px;
-        border-radius: 4px;
+        width: 10px;
+        border-radius: 5px;
     }}
     QScrollBar::handle:vertical {{
         background-color: {c['outline_variant']};
-        border-radius: 4px;
+        border-radius: 5px;
         min-height: 30px;
     }}
     QScrollBar::handle:vertical:hover {{
@@ -258,19 +268,13 @@ def generate_qss(colors: dict) -> str:
 
     QScrollBar:horizontal {{
         background-color: transparent;
-        height: 8px;
-        border-radius: 4px;
+        height: 10px;
+        border-radius: 5px;
     }}
     QScrollBar::handle:horizontal {{
         background-color: {c['outline_variant']};
-        border-radius: 4px;
+        border-radius: 5px;
         min-width: 30px;
-    }}
-    QScrollBar::handle:horizontal:hover {{
-        background-color: {c['outline']};
-    }}
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-        width: 0px;
     }}
 
     /* ========================= */
@@ -279,14 +283,15 @@ def generate_qss(colors: dict) -> str:
     QTreeWidget {{
         background-color: {c['surface']};
         color: {c['on_surface_variant']};
-        border: none;
+        border: 1px solid {c['outline_variant']};
+        border-radius: 8px;
         outline: none;
         padding: 4px;
     }}
     QTreeWidget::item {{
-        padding: 6px 8px;
-        border-radius: 6px;
-        margin: 2px 4px;
+        padding: 5px 8px;
+        border-radius: 4px;
+        margin: 1px 4px;
     }}
     QTreeWidget::item:selected {{
         background-color: {c['primary_container']};
@@ -295,28 +300,22 @@ def generate_qss(colors: dict) -> str:
     QTreeWidget::item:hover {{
         background-color: {c['surface_highlight']};
     }}
-    QHeaderView::section {{
-        background-color: {c['surface_variant']};
-        color: {c['on_surface_variant']};
-        padding: 8px;
-        border: none;
-        font-weight: 500;
-    }}
 
     /* ========================= */
-    /* QListWidget (Snippet Panel) */
+    /* QListWidget */
     /* ========================= */
     QListWidget {{
         background-color: {c['surface']};
         color: {c['on_surface_variant']};
-        border: none;
+        border: 1px solid {c['outline_variant']};
+        border-radius: 8px;
         outline: none;
         padding: 4px;
     }}
     QListWidget::item {{
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin: 2px 6px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin: 2px 4px;
     }}
     QListWidget::item:selected {{
         background-color: {c['primary_container']};
@@ -343,89 +342,24 @@ def generate_qss(colors: dict) -> str:
     }}
 
     /* ========================= */
-    /* QGroupBox */
-    /* ========================= */
-    QGroupBox {{
-        border: 1px solid {c['outline_variant']};
-        border-radius: 12px;
-        margin-top: 12px;
-        padding-top: 16px;
-        font-weight: 500;
-        color: {c['on_surface']};
-    }}
-    QGroupBox::title {{
-        subcontrol-origin: margin;
-        left: 16px;
-        padding: 0 8px;
-        color: {c['primary']};
-    }}
-
-    /* ========================= */
     /* QComboBox */
     /* ========================= */
     QComboBox {{
-        background-color: {c['surface_variant']};
+        background-color: {c['surface']};
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
-        border-radius: 8px;
-        padding: 8px 12px;
-        min-width: 100px;
+        border-radius: 6px;
+        padding: 6px 10px;
     }}
     QComboBox:hover {{
         border-color: {c['outline']};
     }}
-    QComboBox::drop-down {{
-        border: none;
-        width: 30px;
-    }}
-    QComboBox::down-arrow {{
-        image: none;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 5px solid {c['on_surface_variant']};
-    }}
     QComboBox QAbstractItemView {{
-        background-color: {c['surface_variant']};
+        background-color: {c['surface']};
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
-        border-radius: 8px;
+        border-radius: 6px;
         selection-background-color: {c['primary_container']};
-    }}
-
-    /* ========================= */
-    /* QDoubleSpinBox */
-    /* ========================= */
-    QDoubleSpinBox {{
-        background-color: {c['surface_variant']};
-        color: {c['on_surface']};
-        border: 1px solid {c['outline_variant']};
-        border-radius: 8px;
-        padding: 8px 12px;
-    }}
-    QDoubleSpinBox:focus {{
-        border: 2px solid {c['primary']};
-    }}
-
-    /* ========================= */
-    /* QCheckBox */
-    /* ========================= */
-    QCheckBox {{
-        color: {c['on_surface']};
-        spacing: 8px;
-    }}
-    QCheckBox::indicator {{
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-        border: 2px solid {c['outline']};
-        background-color: transparent;
-    }}
-    QCheckBox::indicator:checked {{
-        background-color: {c['primary']};
-        border-color: {c['primary']};
-    }}
-    QCheckBox::indicator:hover {{
-        border-color: {c['primary']};
     }}
 
     /* ========================= */
@@ -436,39 +370,40 @@ def generate_qss(colors: dict) -> str:
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
         border-radius: 8px;
-        padding: 12px;
+        padding: 10px;
         font-size: 13px;
         line-height: 1.6;
     }}
-    QTextBrowser QScrollBar:vertical {{
-        width: 6px;
-    }}
 
     /* ========================= */
-    /* 状态栏 */
+    /* QCheckBox */
     /* ========================= */
-    QLabel#status_label {{
-        color: {c['on_surface_variant']};
-        font-size: 12px;
-        padding: 4px 12px;
+    QCheckBox {{
+        color: {c['on_surface']};
+        spacing: 6px;
+    }}
+    QCheckBox::indicator {{
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 2px solid {c['outline']};
+        background-color: {c['surface']};
+    }}
+    QCheckBox::indicator:checked {{
+        background-color: {c['primary']};
+        border-color: {c['primary']};
     }}
 """
 
 
-def apply_theme(app, theme: str = "dark"):
-    """
-    应用 Material Design 主题到 QApplication
-
-    Args:
-        app: QApplication 实例
-        theme: "dark" 或 "light"
-    """
+def apply_theme(app, theme: str = "light"):
+    """应用 Material Design 主题到 QApplication"""
     colors = DARK if theme == "dark" else LIGHT
     qss = generate_qss(colors)
     app.setStyleSheet(qss)
     return colors
 
 
-def get_colors(theme: str = "dark") -> dict:
+def get_colors(theme: str = "light") -> dict:
     """获取主题颜色配置"""
     return DARK if theme == "dark" else LIGHT

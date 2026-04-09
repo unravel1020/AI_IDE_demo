@@ -24,7 +24,7 @@ from ui.snippet_panel import SnippetPanel
 from ui.terminal_widget import TerminalWidget
 from ui.plugin_panel import PluginPanel
 from ui.chat_panel import ChatPanel
-from themes.material_theme import get_colors
+from themes.material_theme import get_colors, apply_theme
 
 from plugins.plugin_manager import PluginManager
 
@@ -167,8 +167,8 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v2.0.0")
-        self.resize(1300, 750)
+        self.setWindowTitle("AI C++ IDE v2.1.0")
+        self.resize(1400, 850)
 
         self.analyzer = CppAnalyzer()
         self.fixer = CodeFixer()
@@ -186,6 +186,10 @@ class MainWindow(QWidget):
         # 搜索高亮器（必须在 init_ui 之后，因为 code_input 在 init_ui 中创建）
         self.search_highlighter = SearchHighlighter(self.code_input)
         self.find_dialog = None
+
+        # 应用浅色主题
+        app = QApplication.instance()
+        self.theme_colors = apply_theme(app, "light")
 
         # 实时分析
         self.auto_analyze_enabled = False
@@ -247,7 +251,7 @@ class MainWindow(QWidget):
         # 代码编辑器
         self.code_input = CodeEditor()
         self.code_input.setFont(QFont("JetBrains Mono", 12))
-        self.highlighter = CppHighlighter(self.code_input.document())
+        self.highlighter = CppHighlighter(self.code_input.document(), theme="light")
 
         left_splitter.addWidget(self.file_tree)
         left_splitter.addWidget(self.code_input)
@@ -272,8 +276,8 @@ class MainWindow(QWidget):
             tab.setFont(QFont("JetBrains Mono", 11))
 
         # 给所有代码窗口加高亮
-        self.highlighter_fix = CppHighlighter(self.tab_fix.document())
-        self.highlighter_agent = CppHighlighter(self.tab_agent.document())
+        self.highlighter_fix = CppHighlighter(self.tab_fix.document(), theme="light")
+        self.highlighter_agent = CppHighlighter(self.tab_agent.document(), theme="light")
 
         # 代码对比
         self.tab_diff = DiffView()
@@ -305,46 +309,27 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.tab_terminal, "🖥️ 终端")
         self.tabs.addTab(self.tab_plugins, "🔌 插件")
 
-        # 右侧：Tab + AI 对话（垂直分割）
+        # 右：Tab + AI 对话（水平分割）
         right_splitter = QSplitter(Qt.Orientation.Horizontal)
         right_splitter.addWidget(self.tabs)
         right_splitter.addWidget(self.chat_panel)
-        right_splitter.setSizes([700, 400])
+        right_splitter.setSizes([600, 400])
+        right_splitter.setHandleWidth(3)
 
-        main_layout.addWidget(left_splitter)
+        # 组装主布局：左面板 + 右面板
+        left_widget = QWidget()
+        left_widget.setLayout(left_panel)
+        main_layout.addWidget(left_widget)
         main_layout.addWidget(right_splitter)
+        main_layout.setStretch(0, 1)
+        main_layout.setStretch(1, 1)
 
-        # ===== 按钮 =====
-        btn_layout = QHBoxLayout()
-
-        self.btn_analyze = QPushButton("🔍 分析")
-        self.btn_fix = QPushButton("🛠 修复")
-        self.btn_agent = QPushButton("🧠 智能")
-        self.btn_format = QPushButton("✨ 格式化")
-        self.btn_batch = QPushButton("📑 批量")
-        self.btn_explain = QPushButton("📖 解释")
-
-        self.btn_analyze.clicked.connect(self.on_analyze)
-        self.btn_fix.clicked.connect(self.on_fix)
-        self.btn_agent.clicked.connect(self.on_agent)
-        self.btn_format.clicked.connect(lambda: self.format_code("default"))
-        self.btn_batch.clicked.connect(self.on_batch_analyze)
-        self.btn_explain.clicked.connect(self.on_explain)
-
-        btn_layout.addWidget(self.btn_analyze)
-        btn_layout.addWidget(self.btn_fix)
-        btn_layout.addWidget(self.btn_agent)
-        btn_layout.addWidget(self.btn_explain)
-        btn_layout.addWidget(self.btn_format)
-        btn_layout.addWidget(self.btn_batch)
-
-        layout.addLayout(main_layout)
-        layout.addLayout(btn_layout)
-
-        # ===== 进度标签 =====
+        # ===== 进度标签（紧贴在底部按钮下方） =====
         self.progress_label = QLabel("")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.progress_label.setStyleSheet("color: #03DAC6; font-size: 14px; font-weight: 500;")
+        self.progress_label.setStyleSheet("font-size: 13px; font-weight: 500; padding: 4px;")
+
+        layout.addLayout(main_layout)
         layout.addWidget(self.progress_label)
 
         self.setLayout(layout)
@@ -532,7 +517,7 @@ class MainWindow(QWidget):
             complexity = h.get("complexity", "unknown")
             summary = h.get("summary", "") or "无摘要"
 
-            html += f'<div style="margin:8px 0; padding:8px; background:#2d2d2d; border-radius:4px;">'
+            html += f'<div style="margin:8px 0; padding:8px; background:#F0EDE8; border-radius:4px;">'
             html += f'<b>{op_emoji} {file_name}</b> '
             html += f'<span style="color:#888;">({total}个问题 | 复杂度:{complexity})</span><br>'
             html += f'<span style="color:#aaa; font-size:12px;">{summary}</span><br>'
@@ -734,9 +719,9 @@ class MainWindow(QWidget):
                 total += len(r.get(key, []))
 
             color = "#4EC9B0" if total == 0 else "#f48771" if total > 5 else "#dcdcaa"
-            html += f'<div style="margin:6px 0; padding:8px; background:#2d2d2d; border-radius:4px;">'
+            html += f'<div style="margin:6px 0; padding:8px; background:#F0EDE8; border-radius:4px;">'
             html += f'<b style="color:{color}">{file_name}</b> '
-            html += f'<span style="color:#888;">({total}个问题 | 复杂度:{complexity})</span>'
+            html += f'<span style="color:#6B6B6B;">({total}个问题 | 复杂度:{complexity})</span>'
             html += '</div>'
 
         self.tab_analysis.setHtml(html)
@@ -979,20 +964,20 @@ class MainWindow(QWidget):
         shortcut_analyze = QShortcut(QKeySequence("Ctrl+R"), self)
         shortcut_analyze.activated.connect(self.on_analyze)
 
-        # Ctrl+F: 修复
-        shortcut_fix = QShortcut(QKeySequence("Ctrl+F"), self)
+        # Ctrl+Shift+F: 修复 (Ctrl+F 用于查找)
+        shortcut_fix = QShortcut(QKeySequence("Ctrl+Shift+H"), self)
         shortcut_fix.activated.connect(self.on_fix)
 
         # Ctrl+Shift+F: 格式化
-        shortcut_format = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        shortcut_format = QShortcut(QKeySequence("Ctrl+Shift+G"), self)
         shortcut_format.activated.connect(lambda: self.format_code("default"))
 
         # Ctrl+E: 解释代码
         shortcut_explain = QShortcut(QKeySequence("Ctrl+E"), self)
         shortcut_explain.activated.connect(self.on_explain)
 
-        # Ctrl+Shift+R: 批量分析
-        shortcut_batch = QShortcut(QKeySequence("Ctrl+Shift+R"), self)
+        # Ctrl+B: 批量分析
+        shortcut_batch = QShortcut(QKeySequence("Ctrl+B"), self)
         shortcut_batch.activated.connect(self.on_batch_analyze)
 
         # Ctrl+F: 查找
@@ -1009,7 +994,7 @@ class MainWindow(QWidget):
     def init_status_bar(self):
         """初始化状态栏"""
         self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("color: #A0A0A0; padding: 6px 12px; font-size: 12px;")
+        self.status_label.setStyleSheet("padding: 4px 12px; font-size: 12px;")
         # 状态栏添加到布局底部
         self.layout().addWidget(self.status_label)
 

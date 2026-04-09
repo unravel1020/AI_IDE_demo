@@ -37,7 +37,7 @@ class ChatWorker(QThread):
 
 
 class ChatMessage(QFrame):
-    """单条聊天消息组件"""
+    """单条聊天消息组件 - 无硬编码颜色，由 QSS 主题控制"""
 
     def __init__(self, role: str, content: str, parent=None):
         super().__init__(parent)
@@ -52,11 +52,7 @@ class ChatMessage(QFrame):
 
         # 角色标签
         role_label = QLabel("🧑 你" if self.role == "user" else "🤖 AI")
-        role_label.setStyleSheet(f"""
-            font-weight: bold;
-            font-size: 12px;
-            color: {'#BB86FC' if self.role == 'user' else '#03DAC6'};
-        """)
+        role_label.setStyleSheet("font-weight: bold; font-size: 12px;")
         layout.addWidget(role_label)
 
         # 内容
@@ -65,13 +61,7 @@ class ChatMessage(QFrame):
         self.content_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        self.content_label.setStyleSheet("""
-            QLabel {
-                color: #E0E0E0;
-                font-size: 13px;
-                line-height: 1.6;
-            }
-        """)
+        self.content_label.setStyleSheet("font-size: 13px; line-height: 1.6;")
 
         # 解析内容，高亮代码块
         formatted = self._format_content(self.content)
@@ -84,16 +74,7 @@ class ChatMessage(QFrame):
             for i, code in enumerate(code_blocks):
                 btn_layout = QHBoxLayout()
                 btn_insert = QPushButton(f"📥 插入代码块 {i+1}")
-                btn_insert.setStyleSheet("""
-                    QPushButton {
-                        background-color: #03DAC6;
-                        color: #000000;
-                        border: none;
-                        border-radius: 12px;
-                        padding: 4px 12px;
-                        font-size: 11px;
-                    }
-                """)
+                btn_insert.setStyleSheet("font-size: 11px; padding: 4px 12px;")
                 btn_insert.clicked.connect(lambda checked, c=code: self.on_insert_code(c))
                 btn_layout.addWidget(btn_insert)
                 btn_layout.addStretch()
@@ -101,22 +82,22 @@ class ChatMessage(QFrame):
 
         self.setLayout(layout)
 
-        # 根据角色设置背景色
+        # 根据角色设置背景色 - 使用柔和色调
         if self.role == "user":
             self.setStyleSheet("""
                 QFrame {
-                    background-color: #2D2D2D;
-                    border-radius: 12px;
+                    background-color: #F0EDE8;
+                    border-radius: 10px;
                     margin: 4px 20px 4px 4px;
                 }
             """)
         else:
             self.setStyleSheet("""
                 QFrame {
-                    background-color: #1E3A3A;
-                    border-radius: 12px;
+                    background-color: #E8F0F0;
+                    border-radius: 10px;
                     margin: 4px 4px 4px 20px;
-                    border-left: 3px solid #03DAC6;
+                    border-left: 3px solid #4A9B9B;
                 }
             """)
 
@@ -144,7 +125,7 @@ class ChatMessage(QFrame):
 
 
 class ChatPanel(QWidget):
-    """AI 对话侧边栏"""
+    """AI 对话侧边栏 - 无硬编码颜色"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -161,7 +142,7 @@ class ChatPanel(QWidget):
 
         # 标题
         title = QLabel("💬 AI 助手")
-        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #BB86FC;")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
 
         # 快捷指令
@@ -174,20 +155,7 @@ class ChatPanel(QWidget):
         ]
         for label, action in shortcuts:
             btn = QPushButton(label)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #4A4458;
-                    color: #BB86FC;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 4px 10px;
-                    font-size: 11px;
-                }
-                QPushButton:hover {
-                    background-color: #BB86FC;
-                    color: #000000;
-                }
-            """)
+            btn.setStyleSheet("font-size: 11px; padding: 4px 10px;")
             btn.clicked.connect(lambda checked, a=action: self.on_shortcut(a))
             shortcuts_layout.addWidget(btn)
         layout.addLayout(shortcuts_layout)
@@ -217,32 +185,10 @@ class ChatPanel(QWidget):
         self.input_box = QLineEdit()
         self.input_box.setPlaceholderText("输入消息... 使用 @ 引用当前文件")
         self.input_box.returnPressed.connect(self.send_message)
-        self.input_box.setStyleSheet("""
-            QLineEdit {
-                background-color: #2D2D2D;
-                color: #E0E0E0;
-                border: 1px solid #494949;
-                border-radius: 20px;
-                padding: 8px 16px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #BB86FC;
-            }
-        """)
         input_layout.addWidget(self.input_box)
 
         self.btn_send = QPushButton("📤")
-        self.btn_send.setStyleSheet("""
-            QPushButton {
-                background-color: #BB86FC;
-                color: #000000;
-                border: none;
-                border-radius: 20px;
-                padding: 8px 16px;
-                font-size: 14px;
-            }
-        """)
+        self.btn_send.setStyleSheet("font-size: 14px; padding: 6px 14px;")
         self.btn_send.clicked.connect(self.send_message)
         input_layout.addWidget(self.btn_send)
 
@@ -258,12 +204,6 @@ class ChatPanel(QWidget):
         self.btn_context = QPushButton("📄 附带代码")
         self.btn_context.setCheckable(True)
         self.btn_context.setChecked(True)
-        self.btn_context.setStyleSheet("""
-            QPushButton:checked {
-                background-color: #03DAC6;
-                color: #000000;
-            }
-        """)
         btn_layout.addWidget(self.btn_context)
 
         btn_layout.addStretch()
@@ -319,7 +259,7 @@ class ChatPanel(QWidget):
 
         # 显示思考中
         self.thinking_label = QLabel("🤔 AI 思考中...")
-        self.thinking_label.setStyleSheet("color: #A0A0A0; padding: 10px;")
+        self.thinking_label.setStyleSheet("padding: 10px;")
         self.chat_layout.addWidget(self.thinking_label)
 
         # 禁用输入

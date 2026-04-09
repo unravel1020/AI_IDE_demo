@@ -3,24 +3,41 @@ from PyQt6.QtCore import QRegularExpression
 
 
 class CppHighlighter(QSyntaxHighlighter):
-    """C++ 语法高亮器 - Material Design 配色"""
+    """C++ 语法高亮器 - 适配浅色主题的柔和配色"""
 
-    def __init__(self, document):
+    def __init__(self, document, theme="light"):
         super().__init__(document)
+        self.theme = theme
+        self._init_rules()
 
+    def _init_rules(self):
         self.rules = []
 
-        # ===== 颜色定义 =====
-        colors = {
-            "keyword": "#C792EA",      # 紫色 - 关键字
-            "type": "#82AAFF",         # 蓝色 - 类型
-            "function": "#82AAFF",     # 蓝色 - 函数
-            "string": "#C3E88D",       # 绿色 - 字符串
-            "comment": "#546E7A",      # 灰蓝 - 注释
-            "number": "#F78C6C",       # 橙色 - 数字
-            "preprocessor": "#C792EA", # 紫色 - 预处理器
-            "operator": "#89DDFF",     # 青色 - 操作符
+        # 浅色主题配色 - 柔和的色调，对比度适中
+        light_colors = {
+            "keyword":    "#7B68B5",   # 柔和紫 - 关键字
+            "type":       "#2E75B6",   # 柔和蓝 - 类型
+            "function":   "#2E75B6",   # 柔和蓝 - 函数
+            "string":     "#6B8E23",   # 橄榄绿 - 字符串
+            "comment":    "#8A9B8C",   # 灰绿 - 注释
+            "number":     "#B87333",   # 铜色 - 数字
+            "preprocessor": "#7B68B5", # 柔和紫 - 预处理器
+            "operator":   "#4A8080",   # 青色 - 操作符
         }
+
+        # 深色主题配色（保持原样）
+        dark_colors = {
+            "keyword":    "#C792EA",
+            "type":       "#82AAFF",
+            "function":   "#82AAFF",
+            "string":     "#C3E88D",
+            "comment":    "#546E7A",
+            "number":     "#F78C6C",
+            "preprocessor": "#C792EA",
+            "operator":   "#89DDFF",
+        }
+
+        colors = dark_colors if self.theme == "dark" else light_colors
 
         # ===== 关键字 =====
         keywords = [
@@ -94,7 +111,7 @@ class CppHighlighter(QSyntaxHighlighter):
         prep_format.setForeground(QColor(colors["preprocessor"]))
         self.rules.append((QRegularExpression(r"#\s*\w+"), prep_format))
         self.rules.append((QRegularExpression(r"#include\s*<[^>]+>"), prep_format))
-        self.rules.append((QRegularExpression(r"#include\s*\"[^\"]+\""), prep_format))
+        self.rules.append((QRegularExpression(r'#include\s*"[^"]+"'), prep_format))
 
         # ===== 函数调用 =====
         func_format = QTextCharFormat()

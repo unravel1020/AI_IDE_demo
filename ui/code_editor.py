@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QPlainTextEdit, QWidget, QToolTip
 from PyQt6.QtGui import QPainter, QColor, QTextCursor, QCursor
 from PyQt6.QtCore import QRect, QSize
+from themes.material_theme import get_colors
 
 
 class LineNumberArea(QWidget):
@@ -26,13 +27,16 @@ class CodeEditor(QPlainTextEdit):
 
         self.update_line_number_area_width(0)
 
-        # 🔥 开启鼠标跟踪
+        # 开启鼠标跟踪
         self.setMouseTracking(True)
 
-        # 🔥 错误映射（行号 -> 描述）
+        # 错误映射（行号 -> 描述）
         self.error_map = {}
 
         self._last_line = -1
+
+        # 获取主题颜色
+        self.colors = get_colors("light")
 
     # =========================
     # 行号宽度
@@ -64,7 +68,7 @@ class CodeEditor(QPlainTextEdit):
     # =========================
     def line_number_area_paint_event(self, event):
         painter = QPainter(self.line_number_area)
-        painter.fillRect(event.rect(), QColor("#1A1A1A"))
+        painter.fillRect(event.rect(), QColor(self.colors["code_line_number_bg"]))
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -77,8 +81,8 @@ class CodeEditor(QPlainTextEdit):
 
             line_number = block_number + 1
 
-            # ===== 画行号 =====
-            painter.setPen(QColor("#757575"))
+            # 画行号
+            painter.setPen(QColor(self.colors["on_surface_variant"]))
             painter.drawText(
                 0,
                 top,
@@ -88,15 +92,15 @@ class CodeEditor(QPlainTextEdit):
                 str(line_number)
             )
 
-            # ===== 🔴 画红点（核心）=====
+            # 画红点
             if line_number in self.error_map:
                 radius = 4
 
                 x = self.line_number_area.width() - 8
                 y = top + 5
 
-                painter.setBrush(QColor(255, 80, 80))
-                painter.setPen(QColor(255, 80, 80))
+                painter.setBrush(QColor(200, 80, 80))
+                painter.setPen(QColor(200, 80, 80))
                 painter.drawEllipse(x, y, radius, radius)
 
             block = block.next()
@@ -104,7 +108,7 @@ class CodeEditor(QPlainTextEdit):
             block_number += 1
 
     # =========================
-    # 🔥 Hover提示（核心）
+    # Hover提示
     # =========================
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
