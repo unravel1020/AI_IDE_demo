@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QMenuBar, QTabWidget, QTextBrowser, QLabel,
     QSplitter
 )
-from PyQt6.QtCore import QThread, pyqtSignal, QUrl, Qt
+from PyQt6.QtCore import QThread, pyqtSignal, QUrl, Qt, QTimer
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import QTextEdit
 
@@ -160,7 +160,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.1.0")
+        self.setWindowTitle("AI C++ IDE v1.2.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -173,9 +173,16 @@ class MainWindow(QWidget):
         self.search_highlighter = SearchHighlighter(self.code_input)
         self.find_dialog = None
 
+        # 实时分析
+        self.auto_analyze_enabled = False
+        self.auto_analyze_timer = QTimer()
+        self.auto_analyze_timer.setSingleShot(True)
+        self.auto_analyze_timer.timeout.connect(self.on_auto_analyze)
+
         self.init_ui()
         self.init_shortcuts()
         self.init_status_bar()
+        self.init_auto_analyze()
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -200,6 +207,8 @@ class MainWindow(QWidget):
         settings_menu = menu_bar.addMenu("设置")
         settings_menu.addAction("⚙️ 偏好设置", self.open_settings)
         settings_menu.addAction("🔄 重载配置", self.reload_settings)
+        settings_menu.addSeparator()
+        settings_menu.addAction("🔄 切换实时分析", self.toggle_auto_analyze)
 
         layout.setMenuBar(menu_bar)
 
@@ -837,6 +846,28 @@ class MainWindow(QWidget):
         """查找对话框关闭时清除高亮"""
         self.search_highlighter.clear()
         self.find_dialog = None
+
+    def init_auto_analyze(self):
+        """初始化实时分析：监听文本变化"""
+        self.code_input.textChanged.connect(self.on_text_changed)
+
+    def on_text_changed(self):
+        """文本变化时触发自动分析（防抖）"""
+        if self.auto_analyze_enabled:
+            self.auto_analyze_timer.stop()
+            self.auto_analyze_timer.start(2000)  # 2秒防抖
+
+    def on_auto_analyze(self):
+        """执行自动分析"""
+        code = self.code_input.toPlainText()
+        if code.strip() and len(code) > 50:  # 至少50个字符才分析
+            self.on_analyze()
+
+    def toggle_auto_analyze(self):
+        """切换自动分析开关"""
+        self.auto_analyze_enabled = not self.auto_analyze_enabled
+        status = "已开启" if self.auto_analyze_enabled else "已关闭"
+        self.tab_analysis.setHtml(f"<p>🔄 实时分析 {status} (修改代码2秒后自动触发)</p>")
 
     def open_settings(self):
         """打开设置对话框"""
