@@ -2,7 +2,7 @@
 
 > 基于 PyQt6 和 Moonshot AI (Kimi) 构建的智能 C++ 代码分析、修复与可视化 IDE。
 > 
-> **当前版本：v0.6.0**
+> **当前版本：v0.7.0**
 
 ---
 
@@ -168,6 +168,8 @@ python main.py
 | `ui/file_tree.py` | 文件树组件，支持项目目录浏览、代码文件过滤、右键菜单 |
 | `utils/config.py` | 配置管理模块，支持加载/保存/默认配置回退 |
 | `utils/history.py` | 历史记录管理模块，自动保存/加载分析历史 |
+| `utils/report_exporter.py` | 报告导出模块，支持 Markdown/HTML 格式 |
+| `analyzer/code_formatter.py` | 代码格式化器，支持多种代码风格 |
 | `embody_intelligence/test1.py` | 机器人坐标变换演示：齐次变换矩阵计算示例 |
 | `test.cpp` | 测试用 C++ 代码文件 |
 
@@ -191,6 +193,15 @@ MIT License
 ---
 
 ## 📋 版本历史
+
+### v0.7.0 (2026-04-08)
+- ✨ **代码格式化**：新增 `CodeFormatter`，支持多种代码风格格式化（默认/Google/LLVM）
+- ✨ **报告导出**：新增 `ReportExporter`，支持导出 Markdown 和 HTML 格式的分析报告
+- ✨ **格式化菜单**：新增"格式化"菜单，支持三种风格的代码格式化
+- ✨ **快捷键支持**：Ctrl+O 打开、Ctrl+S 保存、Ctrl+R 分析、Ctrl+F 修复、Ctrl+Shift+F 格式化
+- ✨ **状态栏**：底部新增状态栏，显示当前操作状态
+- ✨ **导出菜单**：文件菜单新增导出 Markdown/HTML 报告选项
+- 📁 **新增模块**：`analyzer/code_formatter.py` 代码格式化器，`utils/report_exporter.py` 报告导出器
 
 ### v0.6.0 (2026-04-08)
 - ✨ **历史记录系统**：新增 `history.py` 模块，自动保存每次分析结果到 `data/history.json`

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QTextEdit
 from analyzer.cpp_analyzer import CppAnalyzer
 from analyzer.code_fixer import CodeFixer
 from analyzer.code_agent import CodeAgent
+from analyzer.code_formatter import CodeFormatter
 
 from ui.code_editor import CodeEditor
 from ui.cpp_highlighter import CppHighlighter
@@ -23,6 +24,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.config import get_config, reload_config
 from utils.history import add_history, get_history_list, get_history_detail, delete_history, clear_history
+from utils.report_exporter import ReportExporter
 
 
 # =========================
@@ -79,6 +81,24 @@ class AgentWorker(QThread):
             self.error.emit(str(e))
 
 
+class FormatWorker(QThread):
+    finished = pyqtSignal(str)
+    error = pyqtSignal(str)
+
+    def __init__(self, formatter, code, style):
+        super().__init__()
+        self.formatter = formatter
+        self.code = code
+        self.style = style
+
+    def run(self):
+        try:
+            result = self.formatter.format(self.code, self.style)
+            self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
 # =========================
 # 主窗口
 # =========================
@@ -86,14 +106,17 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.6.0")
+        self.setWindowTitle("AI C++ IDE v0.7.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
         self.fixer = CodeFixer()
         self.agent = CodeAgent()
+        self.formatter = CodeFormatter()
 
         self.init_ui()
+        self.init_shortcuts()
+        self.init_status_bar()
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -101,11 +124,19 @@ class MainWindow(QWidget):
         # ===== 菜单 =====
         menu_bar = QMenuBar()
 
-        file_menu = menu_bar.addMenu("文件")
+        file_menu = menu_bar.addMenu("文件(&F)")
         file_menu.addAction("📂 打开文件夹", self.open_folder)
-        file_menu.addAction("📄 打开.cpp文件", self.open_file)
+        file_menu.addAction("📄 打开文件", self.open_file)
+        file_menu.addSeparator()
+        file_menu.addAction("💾 导出 Markdown 报告", self.export_markdown)
+        file_menu.addAction("🌐 导出 HTML 报告", self.export_html)
         file_menu.addSeparator()
         file_menu.addAction("💾 保存结果", self.save_result)
+
+        format_menu = menu_bar.addMenu("格式化(&O)")
+        format_menu.addAction("✨ 格式化代码 (默认风格)", lambda: self.format_code("default"))
+        format_menu.addAction("✨ 格式化代码 (Google风格)", lambda: self.format_code("google"))
+        format_menu.addAction("✨ 格式化代码 (LLVM风格)", lambda: self.format_code("llvm"))
 
         settings_menu = menu_bar.addMenu("设置")
         settings_menu.addAction("⚙️ 偏好设置", self.open_settings)
@@ -181,14 +212,17 @@ class MainWindow(QWidget):
         self.btn_analyze = QPushButton("🔍 分析")
         self.btn_fix = QPushButton("🛠 修复")
         self.btn_agent = QPushButton("🧠 智能")
+        self.btn_format = QPushButton("✨ 格式化")
 
         self.btn_analyze.clicked.connect(self.on_analyze)
         self.btn_fix.clicked.connect(self.on_fix)
         self.btn_agent.clicked.connect(self.on_agent)
+        self.btn_format.clicked.connect(lambda: self.format_code("default"))
 
         btn_layout.addWidget(self.btn_analyze)
         btn_layout.addWidget(self.btn_fix)
         btn_layout.addWidget(self.btn_agent)
+        btn_layout.addWidget(self.btn_format)
 
         layout.addLayout(main_layout)
         layout.addLayout(btn_layout)
@@ -208,6 +242,7 @@ class MainWindow(QWidget):
         self.btn_analyze.setEnabled(enabled)
         self.btn_fix.setEnabled(enabled)
         self.btn_agent.setEnabled(enabled)
+        self.btn_format.setEnabled(enabled)
 
     # =========================
     # 文件
@@ -475,6 +510,86 @@ class MainWindow(QWidget):
         self.progress_label.setText("")
 
     # =========================
+    # 格式化
+    # =========================
+    def format_code(self, style: str = "default"):
+        """格式化代码"""
+        code = self.code_input.toPlainText()
+        if not code.strip():
+            self.tab_analysis.setHtml("<p>请输入代码</p>")
+            return
+
+        self.set_buttons_enabled(False)
+        self.progress_label.setText("✨ 格式化中...")
+        self.tab_analysis.setHtml("<p>✨ 格式化中...</p>")
+
+        self.worker = FormatWorker(self.formatter, code, style)
+        self.worker.finished.connect(self.show_formatted)
+        self.worker.error.connect(self.on_error)
+        self.worker.start()
+
+    def show_formatted(self, result):
+        """显示格式化结果"""
+        self.code_input.setPlainText(result)
+        self.tab_analysis.setHtml("<p>✅ 代码已格式化</p>")
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
+
+    # =========================
+    # 导出报告
+    # =========================
+    def export_markdown(self):
+        """导出 Markdown 报告"""
+        try:
+            result = self._get_last_analysis_result()
+            if not result:
+                self.tab_analysis.setHtml("<p>请先进行分析，再导出报告</p>")
+                return
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "导出 Markdown 报告", "report.md", "Markdown (*.md)"
+            )
+            if file_path:
+                path = ReportExporter.export_markdown(
+                    self.code_input.toPlainText(),
+                    result,
+                    file_path=file_path
+                )
+                self.tab_analysis.setHtml(f"<p>✅ 报告已导出:<br>{path}</p>")
+        except Exception as e:
+            self.tab_analysis.setHtml(f'<p style="color:red;">❌ 导出失败: {e}</p>')
+
+    def export_html(self):
+        """导出 HTML 报告"""
+        try:
+            result = self._get_last_analysis_result()
+            if not result:
+                self.tab_analysis.setHtml("<p>请先进行分析，再导出报告</p>")
+                return
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "导出 HTML 报告", "report.html", "HTML (*.html)"
+            )
+            if file_path:
+                path = ReportExporter.export_html(
+                    self.code_input.toPlainText(),
+                    result,
+                    file_path=file_path
+                )
+                self.tab_analysis.setHtml(f"<p>✅ 报告已导出:<br>{path}</p>")
+        except Exception as e:
+            self.tab_analysis.setHtml(f'<p style="color:red;">❌ 导出失败: {e}</p>')
+
+    def _get_last_analysis_result(self):
+        """获取最后一次分析结果（从历史记录中）"""
+        history = get_history_list()
+        if history:
+            detail = get_history_detail(history[0]["id"])
+            if detail:
+                return detail.get("full_result", {})
+        return {}
+
+    # =========================
     # 设置
     # =========================
     def open_settings(self):
@@ -498,6 +613,48 @@ class MainWindow(QWidget):
         self.tab_analysis.setHtml(f'<p style="color:red;">❌ 错误：{error_msg}</p>')
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
+
+
+    # =========================
+    # 快捷键
+    # =========================
+    def init_shortcuts(self):
+        """初始化快捷键"""
+        from PyQt6.QtGui import QShortcut, QKeySequence
+
+        # Ctrl+O: 打开文件
+        shortcut_open = QShortcut(QKeySequence("Ctrl+O"), self)
+        shortcut_open.activated.connect(self.open_file)
+
+        # Ctrl+S: 保存结果
+        shortcut_save = QShortcut(QKeySequence("Ctrl+S"), self)
+        shortcut_save.activated.connect(self.save_result)
+
+        # Ctrl+R: 分析
+        shortcut_analyze = QShortcut(QKeySequence("Ctrl+R"), self)
+        shortcut_analyze.activated.connect(self.on_analyze)
+
+        # Ctrl+F: 修复
+        shortcut_fix = QShortcut(QKeySequence("Ctrl+F"), self)
+        shortcut_fix.activated.connect(self.on_fix)
+
+        # Ctrl+Shift+F: 格式化
+        shortcut_format = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        shortcut_format.activated.connect(lambda: self.format_code("default"))
+
+    # =========================
+    # 状态栏
+    # =========================
+    def init_status_bar(self):
+        """初始化状态栏"""
+        self.status_label = QLabel("就绪")
+        self.status_label.setStyleSheet("color: #858585; padding: 4px;")
+        # 状态栏添加到布局底部
+        self.layout().addWidget(self.status_label)
+
+    def update_status(self, message: str):
+        """更新状态栏消息"""
+        self.status_label.setText(message)
 
 
 # =========================
