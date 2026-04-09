@@ -12,6 +12,7 @@ from analyzer.cpp_analyzer import CppAnalyzer
 from analyzer.code_fixer import CodeFixer
 from analyzer.code_agent import CodeAgent
 from analyzer.code_formatter import CodeFormatter
+from analyzer.code_explainer import CodeExplainer
 
 from ui.code_editor import CodeEditor
 from ui.cpp_highlighter import CppHighlighter
@@ -99,6 +100,23 @@ class FormatWorker(QThread):
             self.error.emit(str(e))
 
 
+class ExplainWorker(QThread):
+    finished = pyqtSignal(str)
+    error = pyqtSignal(str)
+
+    def __init__(self, explainer, code):
+        super().__init__()
+        self.explainer = explainer
+        self.code = code
+
+    def run(self):
+        try:
+            result = self.explainer.explain(self.code)
+            self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
 class BatchAnalyzeWorker(QThread):
     """批量分析工作线程"""
     file_started = pyqtSignal(str)   # 开始分析某个文件
@@ -141,13 +159,14 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.8.0")
+        self.setWindowTitle("AI C++ IDE v0.9.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
         self.fixer = CodeFixer()
         self.agent = CodeAgent()
         self.formatter = CodeFormatter()
+        self.explainer = CodeExplainer()
 
         self.init_ui()
         self.init_shortcuts()
@@ -244,21 +263,24 @@ class MainWindow(QWidget):
         # ===== 按钮 =====
         btn_layout = QHBoxLayout()
 
-        self.btn_analyze = QPushButton("🔍 分析当前")
+        self.btn_analyze = QPushButton("🔍 分析")
         self.btn_fix = QPushButton("🛠 修复")
         self.btn_agent = QPushButton("🧠 智能")
         self.btn_format = QPushButton("✨ 格式化")
-        self.btn_batch = QPushButton("📑 批量分析")
+        self.btn_batch = QPushButton("📑 批量")
+        self.btn_explain = QPushButton("📖 解释")
 
         self.btn_analyze.clicked.connect(self.on_analyze)
         self.btn_fix.clicked.connect(self.on_fix)
         self.btn_agent.clicked.connect(self.on_agent)
         self.btn_format.clicked.connect(lambda: self.format_code("default"))
         self.btn_batch.clicked.connect(self.on_batch_analyze)
+        self.btn_explain.clicked.connect(self.on_explain)
 
         btn_layout.addWidget(self.btn_analyze)
         btn_layout.addWidget(self.btn_fix)
         btn_layout.addWidget(self.btn_agent)
+        btn_layout.addWidget(self.btn_explain)
         btn_layout.addWidget(self.btn_format)
         btn_layout.addWidget(self.btn_batch)
 
@@ -282,6 +304,7 @@ class MainWindow(QWidget):
         self.btn_agent.setEnabled(enabled)
         self.btn_format.setEnabled(enabled)
         self.btn_batch.setEnabled(enabled)
+        self.btn_explain.setEnabled(enabled)
 
     # =========================
     # 文件
@@ -549,6 +572,36 @@ class MainWindow(QWidget):
         self.progress_label.setText("")
 
     # =========================
+    # 代码解释
+    # =========================
+    def on_explain(self):
+        """解释代码"""
+        code = self.code_input.toPlainText()
+        if not code.strip():
+            self.tab_analysis.setHtml("<p>请输入代码</p>")
+            return
+
+        self.set_buttons_enabled(False)
+        self.progress_label.setText("📖 解释中...")
+        self.tab_analysis.setHtml("<p>📖 AI 正在解释代码...</p>")
+
+        self.worker = ExplainWorker(self.explainer, code)
+        self.worker.finished.connect(self.show_explain)
+        self.worker.error.connect(self.on_error)
+        self.worker.start()
+
+    def show_explain(self, result: str):
+        """显示代码解释"""
+        # 将纯文本转换为 HTML
+        html = "<h3>📖 代码解释</h3><pre style='white-space:pre-wrap;'>"
+        html += result.replace('<', '&lt;').replace('>', '&gt;')
+        html += "</pre>"
+        self.tab_analysis.setHtml(html)
+        self.tabs.setCurrentIndex(0)
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
+
+    # =========================
     # 批量分析
     # =========================
     def on_batch_analyze(self):
@@ -749,6 +802,10 @@ class MainWindow(QWidget):
         # Ctrl+Shift+F: 格式化
         shortcut_format = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
         shortcut_format.activated.connect(lambda: self.format_code("default"))
+
+        # Ctrl+E: 解释代码
+        shortcut_explain = QShortcut(QKeySequence("Ctrl+E"), self)
+        shortcut_explain.activated.connect(self.on_explain)
 
     # =========================
     # 状态栏
