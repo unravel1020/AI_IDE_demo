@@ -1,2 +1,2 @@
-openai
-PyQt6
+openai>=1.0.0
+PyQt6>=6.4.0

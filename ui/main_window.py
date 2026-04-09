@@ -159,7 +159,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.9.0")
+        self.setWindowTitle("AI C++ IDE v1.0.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -471,7 +471,10 @@ class MainWindow(QWidget):
             html += '</div>'
 
         self.tab_history.setHtml(html)
-        self.tab_history.anchorClicked.connect(self._on_history_link_clicked)
+        # 只连接一次历史链接点击
+        if not hasattr(self, '_history_linked'):
+            self.tab_history.anchorClicked.connect(self._on_history_link_clicked)
+            self._history_linked = True
 
     def _on_history_link_clicked(self, url: QUrl):
         """处理历史记录链接点击"""
@@ -806,6 +809,10 @@ class MainWindow(QWidget):
         # Ctrl+E: 解释代码
         shortcut_explain = QShortcut(QKeySequence("Ctrl+E"), self)
         shortcut_explain.activated.connect(self.on_explain)
+
+        # Ctrl+Shift+R: 批量分析
+        shortcut_batch = QShortcut(QKeySequence("Ctrl+Shift+R"), self)
+        shortcut_batch.activated.connect(self.on_batch_analyze)
 
     # =========================
     # 状态栏
