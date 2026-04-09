@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QApplication,
-    QFileDialog, QMenuBar, QTabWidget, QTextBrowser, QLabel
+    QFileDialog, QMenuBar, QTabWidget, QTextBrowser, QLabel,
+    QSplitter
 )
 from PyQt6.QtCore import QThread, pyqtSignal, QUrl, Qt
 from PyQt6.QtGui import QFont, QColor
@@ -15,6 +16,7 @@ from ui.code_editor import CodeEditor
 from ui.cpp_highlighter import CppHighlighter
 from ui.diff_view import DiffView
 from ui.settings_dialog import SettingsDialog
+from ui.file_tree import FileTree
 
 import sys
 import os
@@ -83,7 +85,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.4.0")
+        self.setWindowTitle("AI C++ IDE v0.5.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -99,8 +101,10 @@ class MainWindow(QWidget):
         menu_bar = QMenuBar()
 
         file_menu = menu_bar.addMenu("文件")
-        file_menu.addAction("打开.cpp文件", self.open_file)
-        file_menu.addAction("保存结果", self.save_result)
+        file_menu.addAction("📂 打开文件夹", self.open_folder)
+        file_menu.addAction("📄 打开.cpp文件", self.open_file)
+        file_menu.addSeparator()
+        file_menu.addAction("💾 保存结果", self.save_result)
 
         settings_menu = menu_bar.addMenu("设置")
         settings_menu.addAction("⚙️ 偏好设置", self.open_settings)
@@ -111,12 +115,23 @@ class MainWindow(QWidget):
         # ===== 主布局 =====
         main_layout = QHBoxLayout()
 
-        # 左：代码编辑器
+        # 左侧面板：文件树 + 代码编辑器（使用分割器）
+        left_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        # 文件树
+        self.file_tree = FileTree()
+        self.file_tree.setMaximumWidth(250)
+        self.file_tree.file_clicked.connect(self.load_file_from_tree)
+
+        # 代码编辑器
         self.code_input = CodeEditor()
         self.code_input.setFont(QFont("Consolas", 11))
         self.code_input.setStyleSheet("background:#1e1e1e; color:white;")
-
         self.highlighter = CppHighlighter(self.code_input.document())
+
+        left_splitter.addWidget(self.file_tree)
+        left_splitter.addWidget(self.code_input)
+        left_splitter.setSizes([220, 900])
 
         # ===== 右：Tab =====
         self.tabs = QTabWidget()
@@ -151,7 +166,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.tab_diff, "🔍 对比")
         self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
 
-        main_layout.addWidget(self.code_input)
+        main_layout.addWidget(left_splitter)
         main_layout.addWidget(self.tabs)
 
         # ===== 按钮 =====
@@ -191,9 +206,23 @@ class MainWindow(QWidget):
     # =========================
     # 文件
     # =========================
+    def open_folder(self):
+        """打开项目文件夹"""
+        folder = self.file_tree.open_folder_dialog()
+        if folder:
+            self.tab_analysis.setHtml(f"<p>📂 已打开文件夹: {folder}</p>")
+
+    def load_file_from_tree(self, file_path: str):
+        """从文件树加载文件到编辑器"""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                self.code_input.setPlainText(f.read())
+        except Exception as e:
+            self.tab_analysis.setHtml(f'<p style="color:red;">❌ 无法读取文件: {e}</p>')
+
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "打开C++文件", "", "C++ Files (*.cpp *.h)"
+            self, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)"
         )
         if file_path:
             with open(file_path, "r", encoding="utf-8") as f:
