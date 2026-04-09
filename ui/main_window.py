@@ -13,6 +13,7 @@ from analyzer.code_agent import CodeAgent
 
 from ui.code_editor import CodeEditor
 from ui.cpp_highlighter import CppHighlighter
+from ui.diff_view import DiffView
 
 import sys
 
@@ -78,7 +79,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.2.0")
+        self.setWindowTitle("AI C++ IDE v0.3.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -131,9 +132,14 @@ class MainWindow(QWidget):
         self.highlighter_fix = CppHighlighter(self.tab_fix.document())
         self.highlighter_agent = CppHighlighter(self.tab_agent.document())
 
-        self.tabs.addTab(self.tab_analysis, "分析结果")
-        self.tabs.addTab(self.tab_fix, "修复代码")
-        self.tabs.addTab(self.tab_agent, "Agent输出")
+        # 代码对比
+        self.tab_diff = DiffView()
+        self.tab_diff.set_highlighter(CppHighlighter, "both")
+
+        self.tabs.addTab(self.tab_analysis, "📊 分析结果")
+        self.tabs.addTab(self.tab_fix, "🛠 修复代码")
+        self.tabs.addTab(self.tab_diff, "🔍 对比")
+        self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
 
         main_layout.addWidget(self.code_input)
         main_layout.addWidget(self.tabs)
@@ -337,6 +343,7 @@ class MainWindow(QWidget):
 
     def show_fix(self, result):
         self.tab_fix.setPlainText(result)
+        self.tab_diff.set_diff(self.code_input.toPlainText(), result)
         self.tabs.setCurrentIndex(1)
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
