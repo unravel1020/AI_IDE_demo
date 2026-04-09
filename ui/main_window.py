@@ -22,6 +22,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.config import get_config, reload_config
+from utils.history import add_history, get_history_list, get_history_detail, delete_history, clear_history
 
 
 # =========================
@@ -85,7 +86,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.5.0")
+        self.setWindowTitle("AI C++ IDE v0.6.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -161,10 +162,15 @@ class MainWindow(QWidget):
         self.tab_diff = DiffView()
         self.tab_diff.set_highlighter(CppHighlighter, "both")
 
+        # 历史记录
+        self.tab_history = QTextBrowser()
+        self.tab_history.setStyleSheet("background:#1e1e1e; color:white;")
+
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
         self.tabs.addTab(self.tab_fix, "🛠 修复代码")
         self.tabs.addTab(self.tab_diff, "🔍 对比")
         self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
+        self.tabs.addTab(self.tab_history, "📜 历史")
 
         main_layout.addWidget(left_splitter)
         main_layout.addWidget(self.tabs)
@@ -333,6 +339,63 @@ class MainWindow(QWidget):
 
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
+
+        # 保存到历史记录
+        try:
+            add_history(self.code_input.toPlainText(), result, operation="analyze")
+            self._refresh_history_view()
+        except Exception as e:
+            print(f"[WARN] 保存历史记录失败: {e}")
+
+    def _refresh_history_view(self):
+        """刷新历史记录视图"""
+        history = get_history_list()
+        if not history:
+            self.tab_history.setHtml("<p>暂无历史记录</p>")
+            return
+
+        html = "<h3>📜 分析历史</h3>"
+        html += f'<p>共 {len(history)} 条记录</p><hr>'
+
+        for h in history:
+            h_id = h["id"]
+            file_name = h.get("file_name", "未命名")
+            operation = h.get("operation", "analyze")
+            op_emoji = {"analyze": "🔍", "fix": "🛠", "agent": "🧠"}.get(operation, "📋")
+            total = h.get("total_issues", 0)
+            complexity = h.get("complexity", "unknown")
+            summary = h.get("summary", "") or "无摘要"
+
+            html += f'<div style="margin:8px 0; padding:8px; background:#2d2d2d; border-radius:4px;">'
+            html += f'<b>{op_emoji} {file_name}</b> '
+            html += f'<span style="color:#888;">({total}个问题 | 复杂度:{complexity})</span><br>'
+            html += f'<span style="color:#aaa; font-size:12px;">{summary}</span><br>'
+            html += f'<a href="history:{h_id}">查看详情</a>'
+            html += '</div>'
+
+        self.tab_history.setHtml(html)
+        self.tab_history.anchorClicked.connect(self._on_history_link_clicked)
+
+    def _on_history_link_clicked(self, url: QUrl):
+        """处理历史记录链接点击"""
+        if url.toString().startswith("history:"):
+            record_id = url.toString().split(":", 1)[1]
+            self._load_history_detail(record_id)
+
+    def _load_history_detail(self, record_id: str):
+        """加载历史记录详情"""
+        detail = get_history_detail(record_id)
+        if not detail:
+            return
+
+        # 加载代码到编辑器
+        self.code_input.setPlainText(detail["full_code"])
+
+        # 加载结果到分析面板
+        self.show_analysis(detail["full_result"])
+
+        # 切换到分析标签
+        self.tabs.setCurrentIndex(0)
 
     # =========================
     # 点击跳转
