@@ -99,6 +99,41 @@ class FormatWorker(QThread):
             self.error.emit(str(e))
 
 
+class BatchAnalyzeWorker(QThread):
+    """批量分析工作线程"""
+    file_started = pyqtSignal(str)   # 开始分析某个文件
+    file_finished = pyqtSignal(str, dict)  # 某个文件分析完成
+    all_finished = pyqtSignal(list)  # 全部完成
+    error = pyqtSignal(str)
+
+    def __init__(self, analyzer, file_list):
+        super().__init__()
+        self.analyzer = analyzer
+        self.file_list = file_list
+        self._running = True
+
+    def run(self):
+        results = []
+        for file_path in self.file_list:
+            if not self._running:
+                break
+            try:
+                self.file_started.emit(file_path)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    code = f.read()
+                result = self.analyzer.analyze(code)
+                result["_file_path"] = file_path
+                result["_file_name"] = os.path.basename(file_path)
+                self.file_finished.emit(file_path, result)
+                results.append(result)
+            except Exception as e:
+                self.error.emit(f"{file_path}: {e}")
+        self.all_finished.emit(results)
+
+    def stop(self):
+        self._running = False
+
+
 # =========================
 # 主窗口
 # =========================
@@ -106,7 +141,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.7.0")
+        self.setWindowTitle("AI C++ IDE v0.8.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -209,20 +244,23 @@ class MainWindow(QWidget):
         # ===== 按钮 =====
         btn_layout = QHBoxLayout()
 
-        self.btn_analyze = QPushButton("🔍 分析")
+        self.btn_analyze = QPushButton("🔍 分析当前")
         self.btn_fix = QPushButton("🛠 修复")
         self.btn_agent = QPushButton("🧠 智能")
         self.btn_format = QPushButton("✨ 格式化")
+        self.btn_batch = QPushButton("📑 批量分析")
 
         self.btn_analyze.clicked.connect(self.on_analyze)
         self.btn_fix.clicked.connect(self.on_fix)
         self.btn_agent.clicked.connect(self.on_agent)
         self.btn_format.clicked.connect(lambda: self.format_code("default"))
+        self.btn_batch.clicked.connect(self.on_batch_analyze)
 
         btn_layout.addWidget(self.btn_analyze)
         btn_layout.addWidget(self.btn_fix)
         btn_layout.addWidget(self.btn_agent)
         btn_layout.addWidget(self.btn_format)
+        btn_layout.addWidget(self.btn_batch)
 
         layout.addLayout(main_layout)
         layout.addLayout(btn_layout)
@@ -243,6 +281,7 @@ class MainWindow(QWidget):
         self.btn_fix.setEnabled(enabled)
         self.btn_agent.setEnabled(enabled)
         self.btn_format.setEnabled(enabled)
+        self.btn_batch.setEnabled(enabled)
 
     # =========================
     # 文件
@@ -508,6 +547,75 @@ class MainWindow(QWidget):
         self.tabs.setCurrentIndex(2)
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
+
+    # =========================
+    # 批量分析
+    # =========================
+    def on_batch_analyze(self):
+        """批量分析选中的文件"""
+        # 获取文件树中选中的文件
+        selected_items = self.file_tree.selectedItems()
+        file_paths = []
+        for item in selected_items:
+            path = item.data(0, Qt.ItemDataRole.UserRole)
+            if path and os.path.isfile(path):
+                file_paths.append(path)
+
+        if not file_paths:
+            self.tab_analysis.setHtml("<p>请先在文件树中选择要分析的文件（支持Ctrl/Shift多选）</p>")
+            return
+
+        self.set_buttons_enabled(False)
+        self.progress_label.setText(f"📑 批量分析 0/{len(file_paths)}...")
+        self.tab_analysis.setHtml(f"<p>📑 开始批量分析 {len(file_paths)} 个文件...</p>")
+
+        self.batch_results = []
+        self.batch_worker = BatchAnalyzeWorker(self.analyzer, file_paths)
+        self.batch_worker.file_started.connect(self._on_batch_file_started)
+        self.batch_worker.file_finished.connect(self._on_batch_file_finished)
+        self.batch_worker.all_finished.connect(self._on_batch_all_finished)
+        self.batch_worker.error.connect(self.on_error)
+        self.batch_worker.start()
+
+    def _on_batch_file_started(self, file_path: str):
+        self.progress_label.setText(f"📑 分析: {os.path.basename(file_path)}...")
+
+    def _on_batch_file_finished(self, file_path: str, result: dict):
+        self.batch_results.append(result)
+        self.progress_label.setText(f"📑 已完成 {len(self.batch_results)} 个文件")
+
+    def _on_batch_all_finished(self, results: list):
+        self.set_buttons_enabled(True)
+        self.progress_label.setText("")
+        self._show_batch_results(results)
+
+    def _show_batch_results(self, results: list):
+        """显示批量分析结果汇总"""
+        if not results:
+            self.tab_analysis.setHtml("<p>批量分析完成，无结果</p>")
+            return
+
+        html = "<h3>📑 批量分析结果汇总</h3>"
+        html += f'<p>共分析 {len(results)} 个文件</p><hr>'
+
+        for r in results:
+            file_name = r.get("_file_name", "未知")
+            complexity = r.get("complexity", "unknown")
+
+            # 统计问题数
+            total = 0
+            for key in ["bugs", "security", "thread_issues", "memory_issues",
+                        "readability", "maintainability", "performance", "suggestions"]:
+                total += len(r.get(key, []))
+
+            color = "#4EC9B0" if total == 0 else "#f48771" if total > 5 else "#dcdcaa"
+            html += f'<div style="margin:6px 0; padding:8px; background:#2d2d2d; border-radius:4px;">'
+            html += f'<b style="color:{color}">{file_name}</b> '
+            html += f'<span style="color:#888;">({total}个问题 | 复杂度:{complexity})</span>'
+            html += '</div>'
+
+        self.tab_analysis.setHtml(html)
+        self.tabs.setCurrentIndex(0)
 
     # =========================
     # 格式化

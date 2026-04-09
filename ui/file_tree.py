@@ -65,8 +65,8 @@ class FileTree(QTreeWidget):
         # 双击事件
         self.itemDoubleClicked.connect(self._on_item_double_clicked)
 
-        # 选择模式
-        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        # 选择模式 - 支持多选
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def set_root_path(self, path: str):
         """设置根目录并刷新树"""
