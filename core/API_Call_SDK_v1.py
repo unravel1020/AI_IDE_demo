@@ -142,6 +142,41 @@ class AIClient:
         return "[ERROR] 多次重试失败"
 
     # =========================
+    # 带历史上下文的对话
+    # =========================
+    def chat_with_history(self, messages: list) -> str:
+        """
+        使用传入的消息历史进行对话
+
+        Args:
+            messages: 消息列表，格式 [{"role": "user"/"assistant"/"system", "content": ""}]
+
+        Returns:
+            AI 回复文本
+        """
+        max_retries = 3
+
+        for attempt in range(max_retries):
+            try:
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=self.temperature
+                )
+                return completion.choices[0].message.content
+
+            except Exception as e:
+                error_msg = str(e)
+                if "overloaded" in error_msg or "429" in error_msg:
+                    print(f"[Retry {attempt + 1}] 模型繁忙，重试中...")
+                    time.sleep(2)
+                    continue
+                else:
+                    return f"[ERROR] {error_msg}"
+
+        return "[ERROR] 多次重试失败"
+
+    # =========================
     # JSON清洗（关键）
     # =========================
     def _clean_json_text(self, text: str) -> str:

@@ -23,6 +23,7 @@ from ui.find_dialog import FindDialog, SearchHighlighter
 from ui.snippet_panel import SnippetPanel
 from ui.terminal_widget import TerminalWidget
 from ui.plugin_panel import PluginPanel
+from ui.chat_panel import ChatPanel
 from themes.material_theme import get_colors
 
 from plugins.plugin_manager import PluginManager
@@ -166,7 +167,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v1.6.0")
+        self.setWindowTitle("AI C++ IDE v2.0.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -291,6 +292,9 @@ class MainWindow(QWidget):
         # 插件面板
         self.tab_plugins = PluginPanel(self.plugin_manager)
 
+        # AI 对话侧边栏
+        self.chat_panel = ChatPanel()
+
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
         self.tabs.addTab(self.tab_fix, "🛠 修复代码")
         self.tabs.addTab(self.tab_diff, "🔍 对比")
@@ -300,8 +304,14 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.tab_terminal, "🖥️ 终端")
         self.tabs.addTab(self.tab_plugins, "🔌 插件")
 
+        # 右侧：Tab + AI 对话（垂直分割）
+        right_splitter = QSplitter(Qt.Orientation.Horizontal)
+        right_splitter.addWidget(self.tabs)
+        right_splitter.addWidget(self.chat_panel)
+        right_splitter.setSizes([700, 400])
+
         main_layout.addWidget(left_splitter)
-        main_layout.addWidget(self.tabs)
+        main_layout.addWidget(right_splitter)
 
         # ===== 按钮 =====
         btn_layout = QHBoxLayout()
