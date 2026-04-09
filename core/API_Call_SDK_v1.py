@@ -1,18 +1,31 @@
 import os
+import sys
 import time
 import json
 from openai import OpenAI
 
+# 确保能导入 utils
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils.config import load_config
+
 
 class AIClient:
     def __init__(self):
-        api_key = os.getenv("MOONSHOT_API_KEY")
+        # 加载配置
+        config = load_config()
+
+        # 优先使用环境变量，其次使用配置文件
+        api_key = os.getenv("MOONSHOT_API_KEY") or config.get("api_key", "")
         if not api_key:
-            raise ValueError("MOONSHOT_API_KEY not set")
+            raise ValueError("MOONSHOT_API_KEY not set (环境变量或配置文件)")
+
+        base_url = config.get("base_url", "https://api.moonshot.cn/v1")
+        self.model = config.get("model", "kimi-k2.5")
+        self.temperature = config.get("temperature", 1.0)
 
         self.client = OpenAI(
             api_key=api_key,
-            base_url="https://api.moonshot.cn/v1",
+            base_url=base_url,
         )
 
         # 多轮对话上下文
@@ -100,9 +113,9 @@ class AIClient:
                     messages = self.messages
 
                 completion = self.client.chat.completions.create(
-                    model="kimi-k2.5",
+                    model=self.model,
                     messages=messages,
-                    temperature=1
+                    temperature=self.temperature
                 )
 
                 reply = completion.choices[0].message.content

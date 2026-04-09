@@ -14,8 +14,12 @@ from analyzer.code_agent import CodeAgent
 from ui.code_editor import CodeEditor
 from ui.cpp_highlighter import CppHighlighter
 from ui.diff_view import DiffView
+from ui.settings_dialog import SettingsDialog
 
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from utils.config import get_config, reload_config
 
 
 # =========================
@@ -79,7 +83,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v0.3.0")
+        self.setWindowTitle("AI C++ IDE v0.4.0")
         self.resize(1300, 750)
 
         self.analyzer = CppAnalyzer()
@@ -93,9 +97,15 @@ class MainWindow(QWidget):
 
         # ===== 菜单 =====
         menu_bar = QMenuBar()
+
         file_menu = menu_bar.addMenu("文件")
         file_menu.addAction("打开.cpp文件", self.open_file)
         file_menu.addAction("保存结果", self.save_result)
+
+        settings_menu = menu_bar.addMenu("设置")
+        settings_menu.addAction("⚙️ 偏好设置", self.open_settings)
+        settings_menu.addAction("🔄 重载配置", self.reload_settings)
+
         layout.setMenuBar(menu_bar)
 
         # ===== 主布局 =====
@@ -371,6 +381,23 @@ class MainWindow(QWidget):
         self.tabs.setCurrentIndex(2)
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
+
+    # =========================
+    # 设置
+    # =========================
+    def open_settings(self):
+        """打开设置对话框"""
+        dialog = SettingsDialog(self)
+        if dialog.exec() == SettingsDialog.DialogCode.Accepted:
+            # 重新加载配置
+            reload_config()
+            self.tab_analysis.setHtml("<p>✅ 设置已保存，下次分析生效</p>")
+
+    def reload_settings(self):
+        """重新加载配置"""
+        reload_config()
+        config = get_config()
+        self.tab_analysis.setHtml(f"<p>🔄 配置已重载<br>模型: {config.get('model')}<br>温度: {config.get('temperature')}</p>")
 
     # =========================
     # 错误处理

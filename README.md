@@ -2,7 +2,7 @@
 
 > 基于 PyQt6 和 Moonshot AI (Kimi) 构建的智能 C++ 代码分析、修复与可视化 IDE。
 > 
-> **当前版本：v0.3.0**
+> **当前版本：v0.4.0**
 
 ---
 
@@ -164,6 +164,8 @@ python main.py
 | `ui/code_editor.py` | 自定义代码编辑器组件，支持行号显示、红点标注、Hover提示 |
 | `ui/cpp_highlighter.py` | C++ 语法高亮器，基于 QSyntaxHighlighter |
 | `ui/diff_view.py` | 代码差异对比视图，左右分栏显示删除（红）/新增（绿）差异 |
+| `ui/settings_dialog.py` | 设置对话框，支持 API 配置、模型选择、主题切换 |
+| `utils/config.py` | 配置管理模块，支持加载/保存/默认配置回退 |
 | `embody_intelligence/test1.py` | 机器人坐标变换演示：齐次变换矩阵计算示例 |
 | `test.cpp` | 测试用 C++ 代码文件 |
 
@@ -187,6 +189,15 @@ MIT License
 ---
 
 ## 📋 版本历史
+
+### v0.4.0 (2026-04-08)
+- ✨ **设置面板**：新增 `SettingsDialog` 设置对话框，支持配置 API Key、Base URL、模型、温度参数
+- ✨ **配置持久化**：设置保存到 `config/settings.json`，支持环境变量和配置文件双重读取
+- ✨ **模型切换**：支持在设置中切换 Kimi 模型（k2.5/k1.5/k1）
+- ✨ **温度调节**：支持调整 Temperature 参数（0.0-2.0）
+- ✨ **配置热重载**：菜单支持"重载配置"功能，无需重启程序
+- 🔧 **SDK增强**：`AIClient` 支持从配置文件读取参数，优先环境变量 fallback 到配置文件
+- 📁 **新增模块**：`utils/config.py` 配置管理模块，`ui/settings_dialog.py` 设置对话框
 
 ### v0.3.0 (2026-04-08)
 - ✨ **代码对比视图（Diff）**：新增 `DiffView` 组件，修复后自动显示原始代码与修复代码的差异对比
