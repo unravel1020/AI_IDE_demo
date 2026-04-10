@@ -430,7 +430,7 @@ class MainWindow(ElaWindow):
 
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)"
+            None, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)"
         )
         if file_path:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -442,7 +442,7 @@ class MainWindow(ElaWindow):
         if not text:
             return
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "保存结果", "", "Text Files (*.txt)"
+            None, "保存结果", "", "Text Files (*.txt)"
         )
         if file_path:
             with open(file_path, "w", encoding="utf-8") as f:
@@ -829,7 +829,7 @@ class MainWindow(ElaWindow):
                 return
 
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "导出 Markdown 报告", "report.md", "Markdown (*.md)"
+                None, "导出 Markdown 报告", "report.md", "Markdown (*.md)"
             )
             if file_path:
                 path = ReportExporter.export_markdown(
@@ -850,7 +850,7 @@ class MainWindow(ElaWindow):
                 return
 
             file_path, _ = QFileDialog.getSaveFileName(
-                self, "导出 HTML 报告", "report.html", "HTML (*.html)"
+                None, "导出 HTML 报告", "report.html", "HTML (*.html)"
             )
             if file_path:
                 path = ReportExporter.export_html(
