@@ -28,6 +28,8 @@ from ui.plugin_panel import PluginPanel
 from ui.chat_panel import ChatPanel
 from plugins.plugin_manager import PluginManager
 
+import qtawesome as qta
+
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -253,12 +255,18 @@ class MainWindow(ElaWindow):
         toolbar_layout = QHBoxLayout()
         toolbar_layout.setSpacing(6)
 
-        self.btn_analyze = QPushButton("🔍 分析")
-        self.btn_fix = QPushButton("🛠 修复")
-        self.btn_agent = QPushButton("🧠 智能")
-        self.btn_format = QPushButton("✨ 格式化")
-        self.btn_batch = QPushButton("📑 批量")
-        self.btn_explain = QPushButton("📖 解释")
+        self.btn_analyze = QPushButton("分析")
+        self.btn_analyze.setIcon(qta.icon('fa5s.play'))
+        self.btn_fix = QPushButton("修复")
+        self.btn_fix.setIcon(qta.icon('fa5s.wrench'))
+        self.btn_agent = QPushButton("智能")
+        self.btn_agent.setIcon(qta.icon('fa5s.magic'))
+        self.btn_format = QPushButton("格式化")
+        self.btn_format.setIcon(qta.icon('fa5s.align-left'))
+        self.btn_batch = QPushButton("批量")
+        self.btn_batch.setIcon(qta.icon('fa5s.layer-group'))
+        self.btn_explain = QPushButton("解释")
+        self.btn_explain.setIcon(qta.icon('fa5s.book'))
 
         self.btn_analyze.setToolTip("分析代码 (Ctrl+R)")
         self.btn_fix.setToolTip("修复代码 (Ctrl+Shift+H)")
@@ -312,10 +320,10 @@ class MainWindow(ElaWindow):
         self.tab_diff = DiffView()
         self.tab_diff.set_highlighter(CppHighlighter, "both")
 
-        self.tabs.addTab(self.tab_analysis, "📊 分析结果")
-        self.tabs.addTab(self.tab_fix, "🛠 修复代码")
-        self.tabs.addTab(self.tab_diff, "🔍 Diff对比")
-        self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
+        self.tabs.addTab(self.tab_analysis, "分析结果")
+        self.tabs.addTab(self.tab_fix, "修复代码")
+        self.tabs.addTab(self.tab_diff, "Diff对比")
+        self.tabs.addTab(self.tab_agent, "Agent输出")
 
         # 工作台主分割器：编辑器区域 | 底部 tabs
         workbench_splitter = QSplitter(Qt.Orientation.Vertical)
@@ -339,7 +347,7 @@ class MainWindow(ElaWindow):
         # =========================
         ai_widget = QWidget()
         ai_layout = QVBoxLayout(ai_widget)
-        ai_layout.setContentsMargins(0, 0, 0, 0)
+        ai_layout.setContentsMargins(8, 8, 8, 8)
         self.chat_panel = ChatPanel()
         ai_layout.addWidget(self.chat_panel)
         self.addPageNode("AI助手", ai_widget, "Chat")
@@ -350,7 +358,7 @@ class MainWindow(ElaWindow):
         self.tab_history = QTextBrowser()
         history_widget = QWidget()
         history_layout = QVBoxLayout(history_widget)
-        history_layout.setContentsMargins(0, 0, 0, 0)
+        history_layout.setContentsMargins(8, 8, 8, 8)
         history_layout.addWidget(self.tab_history)
         self.addPageNode("历史记录", history_widget, "History")
 
@@ -361,7 +369,7 @@ class MainWindow(ElaWindow):
         self.tab_snippets.snippet_selected.connect(self.insert_snippet)
         snippets_widget = QWidget()
         snippets_layout = QVBoxLayout(snippets_widget)
-        snippets_layout.setContentsMargins(0, 0, 0, 0)
+        snippets_layout.setContentsMargins(8, 8, 8, 8)
         snippets_layout.addWidget(self.tab_snippets)
         self.addPageNode("代码片段", snippets_widget, "Box")
 
@@ -371,7 +379,7 @@ class MainWindow(ElaWindow):
         self.tab_terminal = TerminalWidget()
         terminal_widget = QWidget()
         terminal_layout = QVBoxLayout(terminal_widget)
-        terminal_layout.setContentsMargins(0, 0, 0, 0)
+        terminal_layout.setContentsMargins(8, 8, 8, 8)
         terminal_layout.addWidget(self.tab_terminal)
         self.addPageNode("终端", terminal_widget, "Terminal")
 
@@ -381,7 +389,7 @@ class MainWindow(ElaWindow):
         self.tab_plugins = PluginPanel(self.plugin_manager)
         plugins_widget = QWidget()
         plugins_layout = QVBoxLayout(plugins_widget)
-        plugins_layout.setContentsMargins(0, 0, 0, 0)
+        plugins_layout.setContentsMargins(8, 8, 8, 8)
         plugins_layout.addWidget(self.tab_plugins)
         self.addPageNode("插件", plugins_widget, "Plugin")
 
@@ -1050,9 +1058,8 @@ class MainWindow(ElaWindow):
     def init_status_bar(self):
         """初始化状态栏"""
         self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("padding: 4px 12px; font-size: 12px;")
-        # 状态栏添加到布局底部
-        self.centralWidget().layout().addWidget(self.status_label)
+        self.status_label.setStyleSheet("padding: 4px 8px;")
+        self.statusBar().addWidget(self.status_label)
 
     def update_status(self, message: str):
         """更新状态栏消息"""
