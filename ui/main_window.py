@@ -210,7 +210,6 @@ class MainWindow(ElaWindow):
         a_open_file.triggered.connect(self.open_file)
         file_menu.addSeparator()
         a_search = file_menu.addAction("项目内搜索")
-        a_search.setShortcut("Ctrl+Shift+F")
         a_search.triggered.connect(self.open_search_panel)
         file_menu.addSeparator()
         a_export_md = file_menu.addAction("导出 Markdown 报告")
