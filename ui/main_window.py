@@ -200,30 +200,43 @@ class MainWindow(ElaWindow):
         menu_bar = QMenuBar()
 
         file_menu = menu_bar.addMenu("文件(&F)")
-        file_menu.addAction("📂 打开文件夹", self.open_folder)
-        file_menu.addAction("📄 打开文件", self.open_file)
+        a_open_folder = file_menu.addAction("打开文件夹")
+        a_open_folder.triggered.connect(self.open_folder)
+        a_open_file = file_menu.addAction("打开文件")
+        a_open_file.triggered.connect(self.open_file)
         file_menu.addSeparator()
-        file_menu.addAction("💾 导出 Markdown 报告", self.export_markdown)
-        file_menu.addAction("🌐 导出 HTML 报告", self.export_html)
+        a_export_md = file_menu.addAction("导出 Markdown 报告")
+        a_export_md.triggered.connect(self.export_markdown)
+        a_export_html = file_menu.addAction("导出 HTML 报告")
+        a_export_html.triggered.connect(self.export_html)
         file_menu.addSeparator()
-        file_menu.addAction("💾 保存结果", self.save_result)
+        a_save = file_menu.addAction("保存结果")
+        a_save.triggered.connect(self.save_result)
 
         format_menu = menu_bar.addMenu("格式化(&O)")
-        format_menu.addAction("✨ 格式化代码 (默认风格)", lambda: self.format_code("default"))
-        format_menu.addAction("✨ 格式化代码 (Google风格)", lambda: self.format_code("google"))
-        format_menu.addAction("✨ 格式化代码 (LLVM风格)", lambda: self.format_code("llvm"))
+        a_fmt_default = format_menu.addAction("格式化代码 (默认风格)")
+        a_fmt_default.triggered.connect(lambda: self.format_code("default"))
+        a_fmt_google = format_menu.addAction("格式化代码 (Google风格)")
+        a_fmt_google.triggered.connect(lambda: self.format_code("google"))
+        a_fmt_llvm = format_menu.addAction("格式化代码 (LLVM风格)")
+        a_fmt_llvm.triggered.connect(lambda: self.format_code("llvm"))
 
-        plugin_menu = menu_bar.addMenu("🔌 插件")
-        plugin_menu.addAction("🔄 重载插件", self.reload_plugins)
+        plugin_menu = menu_bar.addMenu("插件")
+        a_reload_plugins = plugin_menu.addAction("重载插件")
+        a_reload_plugins.triggered.connect(self.reload_plugins)
         plugin_menu.addSeparator()
         for item in self.plugin_manager.get_all_menu_items():
-            plugin_menu.addAction(item["name"], item["callback"])
+            a = plugin_menu.addAction(item["name"])
+            a.triggered.connect(item["callback"])
 
         settings_menu = menu_bar.addMenu("设置")
-        settings_menu.addAction("⚙️ 偏好设置", self.open_settings)
-        settings_menu.addAction("🔄 重载配置", self.reload_settings)
+        a_settings = settings_menu.addAction("偏好设置")
+        a_settings.triggered.connect(self.open_settings)
+        a_reload_cfg = settings_menu.addAction("重载配置")
+        a_reload_cfg.triggered.connect(self.reload_settings)
         settings_menu.addSeparator()
-        settings_menu.addAction("🔄 切换实时分析", self.toggle_auto_analyze)
+        a_toggle_auto = settings_menu.addAction("切换实时分析")
+        a_toggle_auto.triggered.connect(self.toggle_auto_analyze)
 
         self.setMenuBar(menu_bar)
 
@@ -415,9 +428,16 @@ class MainWindow(ElaWindow):
     # =========================
     def open_folder(self):
         """打开项目文件夹"""
-        folder = self.file_tree.open_folder_dialog()
-        if folder:
-            self.tab_analysis.setHtml(f"<p>📂 已打开文件夹: {folder}</p>")
+        try:
+            print("[DEBUG] open_folder: calling file_tree.open_folder_dialog")
+            folder = self.file_tree.open_folder_dialog()
+            print(f"[DEBUG] open_folder: folder={folder}")
+            if folder:
+                self.tab_analysis.setHtml(f"<p>已打开文件夹: {folder}</p>")
+        except Exception as e:
+            print(f"[DEBUG] open_folder ERROR: {e}")
+            import traceback
+            traceback.print_exc()
 
     def load_file_from_tree(self, file_path: str):
         """从文件树加载文件到编辑器"""
@@ -429,14 +449,27 @@ class MainWindow(ElaWindow):
             self.tab_analysis.setHtml(f'<p style="color:red;">❌ 无法读取文件: {e}</p>')
 
     def open_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            None, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)",
-            options=QFileDialog.Option.DontUseNativeDialog
-        )
-        if file_path:
-            with open(file_path, "r", encoding="utf-8") as f:
-                self.code_input.setPlainText(f.read())
-            self.tab_terminal.set_current_file(file_path)
+        try:
+            print("[DEBUG] open_file: showing dialog")
+            file_path, _ = QFileDialog.getOpenFileName(
+                None, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)",
+                options=QFileDialog.Option.DontUseNativeDialog
+            )
+            print(f"[DEBUG] open_file: path={file_path}")
+            if file_path:
+                print("[DEBUG] open_file: reading file")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                print(f"[DEBUG] open_file: read {len(content)} chars")
+                print("[DEBUG] open_file: setting code_input")
+                self.code_input.setPlainText(content)
+                print("[DEBUG] open_file: set_current_file")
+                self.tab_terminal.set_current_file(file_path)
+                print("[DEBUG] open_file: done")
+        except Exception as e:
+            print(f"[DEBUG] open_file ERROR: {e}")
+            import traceback
+            traceback.print_exc()
 
     def save_result(self):
         text = self.tab_analysis.toPlainText()
