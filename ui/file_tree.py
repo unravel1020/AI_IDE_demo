@@ -149,8 +149,11 @@ class FileTree(QTreeWidget):
 
     def open_folder_dialog(self):
         """打开文件夹选择对话框"""
+        from PyQt6.QtWidgets import QWidget
+        # 获取主窗口作为 parent
+        parent = self.window()
         folder = QFileDialog.getExistingDirectory(
-            None, "选择项目文件夹",
+            parent, "选择项目文件夹",
             options=QFileDialog.Option.DontUseNativeDialog
         )
         if folder:
