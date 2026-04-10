@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLineEdit,
+    QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
     QPushButton, QTreeWidget, QTreeWidgetItem, QLabel,
     QCheckBox, QComboBox, QProgressBar, QGroupBox
 )
@@ -106,26 +106,22 @@ class SearchWorker(QThread):
         self._running = False
 
 
-class SearchPanel(QDialog):
+class SearchPanel(QWidget):
     """项目内搜索面板"""
 
     goto_line = pyqtSignal(str, int)  # 文件路径, 行号
 
     def __init__(self, parent=None, root_path=None):
         super().__init__(parent)
-        print("[SearchPanel] init start")
         self.root_path = root_path or ""
         self.worker = None
         self.result_items = []  # 缓存结果项
 
         self.setWindowTitle("项目内搜索")
         self.resize(700, 500)
-        print("[SearchPanel] calling init_ui")
         self.init_ui()
-        print("[SearchPanel] init done")
 
     def init_ui(self):
-        print("[SearchPanel] init_ui start")
         layout = QVBoxLayout()
         layout.setSpacing(10)
 
@@ -208,11 +204,9 @@ class SearchPanel(QDialog):
         layout.addLayout(btn_layout)
 
         self.setLayout(layout)
-        print("[SearchPanel] layout set")
 
         # 聚焦到搜索框
         self.search_input.setFocus()
-        print("[SearchPanel] init_ui done")
 
     def set_root_path(self, path: str):
         """设置搜索根目录"""
@@ -321,6 +315,6 @@ class SearchPanel(QDialog):
     def keyPressEvent(self, event):
         """处理按键事件"""
         if event.key() == Qt.Key.Key_Escape:
-            self.close()
+            self.hide()
         else:
             super().keyPressEvent(event)

@@ -631,9 +631,6 @@ class MainWindow(ElaWindow):
             self._update_file_info(file_path)
             self.update_status(f"已打开: {os.path.basename(file_path)}")
         except Exception as e:
-            print(f"[ERROR] load_file_from_tree: {e}")
-            import traceback
-            traceback.print_exc()
             self.tab_analysis.setHtml(f'<p style="color:red;">无法读取文件: {e}</p>')
 
     def open_file(self):
@@ -643,18 +640,11 @@ class MainWindow(ElaWindow):
                 options=QFileDialog.Option.DontUseNativeDialog
             )
             if file_path:
-                print(f"[DEBUG] Opening file: {file_path}")
                 with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                print(f"[DEBUG] File read, {len(content)} chars")
-                self.code_input.setPlainText(content)
-                print(f"[DEBUG] setPlainText done")
+                    self.code_input.setPlainText(f.read())
                 self.tab_terminal.set_current_file(file_path)
-                print(f"[DEBUG] terminal updated")
                 self._update_file_info(file_path)
-                print(f"[DEBUG] file info updated")
                 self.update_status(f"已打开: {os.path.basename(file_path)}")
-                print(f"[DEBUG] status updated")
         except Exception as e:
             print(f"[ERROR] open_file: {e}")
             import traceback
@@ -1355,13 +1345,10 @@ class MainWindow(ElaWindow):
 
     def _update_cursor_position(self):
         """更新光标位置显示"""
-        try:
-            cursor = self.code_input.textCursor()
-            line = cursor.blockNumber() + 1
-            col = cursor.columnNumber() + 1
-            self.status_position.setText(f"Ln {line}, Col {col}")
-        except Exception as e:
-            print(f"[ERROR] _update_cursor_position: {e}")
+        cursor = self.code_input.textCursor()
+        line = cursor.blockNumber() + 1
+        col = cursor.columnNumber() + 1
+        self.status_position.setText(f"Ln {line}, Col {col}")
 
     def _update_file_info(self, file_path: str = ""):
         """更新文件相关信息"""
