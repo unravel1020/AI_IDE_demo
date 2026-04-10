@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
     "base_url": "https://api.moonshot.cn/v1",
     "model": "kimi-k2.5",
     "temperature": 1.0,
-    "theme": "dark"
+    "theme": "light"
 }
 
 # 缓存的配置
