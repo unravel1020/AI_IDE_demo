@@ -1,12 +1,14 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
+    QVBoxLayout, QHBoxLayout,
     QPushButton, QApplication,
     QFileDialog, QMenuBar, QTabWidget, QTextBrowser, QLabel,
-    QSplitter
+    QSplitter, QWidget
 )
 from PyQt6.QtCore import QThread, pyqtSignal, QUrl, Qt, QTimer
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import QTextEdit
+
+from PyQt6ElaWidgetTools import ElaWindow
 
 from analyzer.cpp_analyzer import CppAnalyzer
 from analyzer.code_fixer import CodeFixer
@@ -161,7 +163,7 @@ class BatchAnalyzeWorker(QThread):
 # =========================
 # 主窗口
 # =========================
-class MainWindow(QWidget):
+class MainWindow(ElaWindow):
     def __init__(self):
         super().__init__()
 
@@ -196,7 +198,8 @@ class MainWindow(QWidget):
         self.init_auto_analyze()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        central_widget = QWidget()
+        layout = QVBoxLayout(central_widget)
 
         # ===== 菜单 =====
         menu_bar = QMenuBar()
@@ -227,7 +230,7 @@ class MainWindow(QWidget):
         settings_menu.addSeparator()
         settings_menu.addAction("🔄 切换实时分析", self.toggle_auto_analyze)
 
-        layout.setMenuBar(menu_bar)
+        self.setMenuBar(menu_bar)
 
         # ===== 主布局 =====
         main_layout = QHBoxLayout()
@@ -355,7 +358,7 @@ class MainWindow(QWidget):
         layout.addLayout(main_layout)
         layout.addWidget(self.progress_label)
 
-        self.setLayout(layout)
+        self.setCentralWidget(central_widget)
 
     # =========================
     # 按钮状态管理
@@ -1019,7 +1022,7 @@ class MainWindow(QWidget):
         self.status_label = QLabel("就绪")
         self.status_label.setStyleSheet("padding: 4px 12px; font-size: 12px;")
         # 状态栏添加到布局底部
-        self.layout().addWidget(self.status_label)
+        self.centralWidget().layout().addWidget(self.status_label)
 
     def update_status(self, message: str):
         """更新状态栏消息"""
