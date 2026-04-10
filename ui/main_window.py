@@ -167,7 +167,7 @@ class MainWindow(ElaWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("AI C++ IDE v2.1.0")
+        self.setWindowTitle("AI C++ IDE v2.2.0")
         self.resize(1400, 850)
 
         self.analyzer = CppAnalyzer()
@@ -181,10 +181,8 @@ class MainWindow(ElaWindow):
         self.plugin_manager.set_main_window(self)
         self.plugin_manager.load_all_plugins()
 
-        self.init_ui()
-
-        # 搜索高亮器（必须在 init_ui 之后，因为 code_input 在 init_ui 中创建）
-        self.search_highlighter = SearchHighlighter(self.code_input)
+        # 搜索高亮器
+        self.search_highlighter = None
         self.find_dialog = None
 
         # 实时分析
@@ -193,14 +191,9 @@ class MainWindow(ElaWindow):
         self.auto_analyze_timer.setSingleShot(True)
         self.auto_analyze_timer.timeout.connect(self.on_auto_analyze)
 
-        self.init_shortcuts()
-        self.init_status_bar()
-        self.init_auto_analyze()
+        self.init_ui()  # 内部完成所有组件创建和初始化
 
     def init_ui(self):
-        central_widget = QWidget()
-        layout = QVBoxLayout(central_widget)
-
         # ===== 菜单 =====
         menu_bar = QMenuBar()
 
@@ -232,18 +225,16 @@ class MainWindow(ElaWindow):
 
         self.setMenuBar(menu_bar)
 
-        # ===== 主布局 =====
-        main_layout = QHBoxLayout()
-        main_layout.setContentsMargins(8, 8, 8, 4)
-        main_layout.setSpacing(8)
+        # =========================
+        # 页面1: 工作台
+        # =========================
+        workbench_widget = QWidget()
+        workbench_layout = QVBoxLayout(workbench_widget)
+        workbench_layout.setContentsMargins(8, 8, 8, 4)
+        workbench_layout.setSpacing(8)
 
-        # ---- 左侧面板：文件树 + 编辑器 + 工具栏 ----
-        left_panel = QVBoxLayout()
-        left_panel.setContentsMargins(0, 0, 0, 0)
-        left_panel.setSpacing(6)
-
-        # 文件树 + 代码编辑器分割器
-        left_splitter = QSplitter(Qt.Orientation.Horizontal)
+        # ---- 编辑器区域：文件树 + 代码编辑器 ----
+        editor_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         self.file_tree = FileTree()
         self.file_tree.setMaximumWidth(240)
@@ -253,12 +244,10 @@ class MainWindow(ElaWindow):
         self.code_input.setFont(QFont("JetBrains Mono", 12))
         self.highlighter = CppHighlighter(self.code_input.document(), theme="light")
 
-        left_splitter.addWidget(self.file_tree)
-        left_splitter.addWidget(self.code_input)
-        left_splitter.setSizes([200, 800])
-        left_splitter.setHandleWidth(3)
-
-        left_panel.addWidget(left_splitter, 1)
+        editor_splitter.addWidget(self.file_tree)
+        editor_splitter.addWidget(self.code_input)
+        editor_splitter.setSizes([200, 800])
+        editor_splitter.setHandleWidth(3)
 
         # 工具栏：操作按钮
         toolbar_layout = QHBoxLayout()
@@ -292,12 +281,17 @@ class MainWindow(ElaWindow):
         toolbar_layout.addWidget(self.btn_format)
         toolbar_layout.addWidget(self.btn_batch)
         toolbar_layout.addStretch()
-        left_panel.addLayout(toolbar_layout)
 
-        left_widget = QWidget()
-        left_widget.setLayout(left_panel)
+        editor_area = QVBoxLayout()
+        editor_area.setContentsMargins(0, 0, 0, 0)
+        editor_area.setSpacing(6)
+        editor_area.addWidget(editor_splitter, 1)
+        editor_area.addLayout(toolbar_layout)
 
-        # ---- 右侧面板：Tab + AI 对话 ----
+        editor_widget = QWidget()
+        editor_widget.setLayout(editor_area)
+
+        # ---- 底部 TabWidget：4个核心tab ----
         self.tabs = QTabWidget()
 
         self.tab_analysis = QTextBrowser()
@@ -318,47 +312,84 @@ class MainWindow(ElaWindow):
         self.tab_diff = DiffView()
         self.tab_diff.set_highlighter(CppHighlighter, "both")
 
-        self.tab_history = QTextBrowser()
-
-        self.tab_snippets = SnippetPanel()
-        self.tab_snippets.snippet_selected.connect(self.insert_snippet)
-        self.tab_snippets.setMaximumWidth(250)
-
-        self.tab_terminal = TerminalWidget()
-
-        self.tab_plugins = PluginPanel(self.plugin_manager)
-
-        self.chat_panel = ChatPanel()
-
         self.tabs.addTab(self.tab_analysis, "📊 分析结果")
         self.tabs.addTab(self.tab_fix, "🛠 修复代码")
-        self.tabs.addTab(self.tab_diff, "🔍 对比")
+        self.tabs.addTab(self.tab_diff, "🔍 Diff对比")
         self.tabs.addTab(self.tab_agent, "🧠 Agent输出")
-        self.tabs.addTab(self.tab_history, "📜 历史")
-        self.tabs.addTab(self.tab_snippets, "📦 片段")
-        self.tabs.addTab(self.tab_terminal, "🖥️ 终端")
-        self.tabs.addTab(self.tab_plugins, "🔌 插件")
 
-        right_splitter = QSplitter(Qt.Orientation.Horizontal)
-        right_splitter.addWidget(self.tabs)
-        right_splitter.addWidget(self.chat_panel)
-        right_splitter.setSizes([600, 400])
-        right_splitter.setHandleWidth(3)
+        # 工作台主分割器：编辑器区域 | 底部 tabs
+        workbench_splitter = QSplitter(Qt.Orientation.Vertical)
+        workbench_splitter.addWidget(editor_widget)
+        workbench_splitter.addWidget(self.tabs)
+        workbench_splitter.setSizes([520, 280])
+        workbench_splitter.setHandleWidth(3)
 
-        main_layout.addWidget(left_widget)
-        main_layout.addWidget(right_splitter)
-        main_layout.setStretch(0, 1)
-        main_layout.setStretch(1, 1)
+        workbench_layout.addWidget(workbench_splitter, 1)
 
-        # ===== 进度标签 =====
+        # 进度标签
         self.progress_label = QLabel("")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.progress_label.setStyleSheet("font-size: 13px; font-weight: 500; padding: 4px;")
+        workbench_layout.addWidget(self.progress_label)
 
-        layout.addLayout(main_layout)
-        layout.addWidget(self.progress_label)
+        self.addPageNode("工作台", workbench_widget, "Home")
 
-        self.setCentralWidget(central_widget)
+        # =========================
+        # 页面2: AI助手
+        # =========================
+        ai_widget = QWidget()
+        ai_layout = QVBoxLayout(ai_widget)
+        ai_layout.setContentsMargins(0, 0, 0, 0)
+        self.chat_panel = ChatPanel()
+        ai_layout.addWidget(self.chat_panel)
+        self.addPageNode("AI助手", ai_widget, "Chat")
+
+        # =========================
+        # 页面3: 历史记录
+        # =========================
+        self.tab_history = QTextBrowser()
+        history_widget = QWidget()
+        history_layout = QVBoxLayout(history_widget)
+        history_layout.setContentsMargins(0, 0, 0, 0)
+        history_layout.addWidget(self.tab_history)
+        self.addPageNode("历史记录", history_widget, "History")
+
+        # =========================
+        # 页面4: 代码片段
+        # =========================
+        self.tab_snippets = SnippetPanel()
+        self.tab_snippets.snippet_selected.connect(self.insert_snippet)
+        snippets_widget = QWidget()
+        snippets_layout = QVBoxLayout(snippets_widget)
+        snippets_layout.setContentsMargins(0, 0, 0, 0)
+        snippets_layout.addWidget(self.tab_snippets)
+        self.addPageNode("代码片段", snippets_widget, "Box")
+
+        # =========================
+        # 页面5: 终端
+        # =========================
+        self.tab_terminal = TerminalWidget()
+        terminal_widget = QWidget()
+        terminal_layout = QVBoxLayout(terminal_widget)
+        terminal_layout.setContentsMargins(0, 0, 0, 0)
+        terminal_layout.addWidget(self.tab_terminal)
+        self.addPageNode("终端", terminal_widget, "Terminal")
+
+        # =========================
+        # 页面6: 插件
+        # =========================
+        self.tab_plugins = PluginPanel(self.plugin_manager)
+        plugins_widget = QWidget()
+        plugins_layout = QVBoxLayout(plugins_widget)
+        plugins_layout.setContentsMargins(0, 0, 0, 0)
+        plugins_layout.addWidget(self.tab_plugins)
+        self.addPageNode("插件", plugins_widget, "Plugin")
+
+        # ---- 初始化需要在组件创建后设置的内容 ----
+        self.search_highlighter = SearchHighlighter(self.code_input)
+        self.init_shortcuts()
+        self.init_status_bar()
+        self.init_auto_analyze()
 
     # =========================
     # 按钮状态管理
