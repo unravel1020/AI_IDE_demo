@@ -100,25 +100,33 @@ class FileTree(QTreeWidget):
 
     def refresh(self):
         """刷新文件树"""
-        self.clear()
-        if not self.root_path or not os.path.isdir(self.root_path):
-            return
+        try:
+            self.clear()
+            if not self.root_path or not os.path.isdir(self.root_path):
+                return
 
-        # 创建根节点
-        root_name = os.path.basename(self.root_path) or self.root_path
-        root_item = QTreeWidgetItem(self)
-        root_item.setText(0, f"📂 {root_name}")
-        root_item.setData(0, Qt.ItemDataRole.UserRole, self.root_path)
-        root_item.setExpanded(True)
+            # 创建根节点
+            root_name = os.path.basename(self.root_path) or self.root_path
+            root_item = QTreeWidgetItem(self)
+            root_item.setText(0, f"📂 {root_name}")
+            root_item.setData(0, Qt.ItemDataRole.UserRole, self.root_path)
+            root_item.setExpanded(True)
 
-        # 递归构建树
-        self._build_tree(self.root_path, root_item)
+            # 递归构建树
+            self._build_tree(self.root_path, root_item)
+        except Exception as e:
+            print(f"[ERROR] FileTree.refresh: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _build_tree(self, path: str, parent_item: QTreeWidgetItem):
         """递归构建目录树"""
         try:
             entries = sorted(os.listdir(path))
         except PermissionError:
+            return
+        except Exception as e:
+            print(f"[ERROR] _build_tree listdir: {e}")
             return
 
         # 先处理文件夹，再处理文件
@@ -141,18 +149,24 @@ class FileTree(QTreeWidget):
 
         # 添加文件夹
         for name, full_path in dirs:
-            item = QTreeWidgetItem(parent_item)
-            item.setText(0, f"📁 {name}")
-            item.setData(0, Qt.ItemDataRole.UserRole, full_path)
-            self._build_tree(full_path, item)
+            try:
+                item = QTreeWidgetItem(parent_item)
+                item.setText(0, f"📁 {name}")
+                item.setData(0, Qt.ItemDataRole.UserRole, full_path)
+                self._build_tree(full_path, item)
+            except Exception as e:
+                print(f"[ERROR] _build_tree dir item: {e}")
 
         # 添加文件
         for name, full_path in files:
-            item = QTreeWidgetItem(parent_item)
-            item.setText(0, f"📄 {name}")
-            item.setData(0, Qt.ItemDataRole.UserRole, full_path)
-            # 代码文件用主题强调色
-            item.setForeground(0, QColor("#5B6BB8"))
+            try:
+                item = QTreeWidgetItem(parent_item)
+                item.setText(0, f"📄 {name}")
+                item.setData(0, Qt.ItemDataRole.UserRole, full_path)
+                # 代码文件用主题强调色（暂时禁用，排查崩溃问题）
+                # item.setForeground(0, QColor("#5B6BB8"))
+            except Exception as e:
+                print(f"[ERROR] _build_tree file item: {e}")
 
     def _on_item_clicked(self, item: QTreeWidgetItem, column: int):
         """单击处理"""
