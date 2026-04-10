@@ -29,31 +29,7 @@ class FileTree(QTreeWidget):
         self.setHeaderLabel("📁 项目文件")
         self.setColumnCount(1)
 
-        # 样式
-        self.setStyleSheet("""
-            QTreeWidget {
-                background-color: #252526;
-                color: #cccccc;
-                border: none;
-                outline: none;
-            }
-            QTreeWidget::item {
-                padding: 4px;
-                border-radius: 3px;
-            }
-            QTreeWidget::item:selected {
-                background-color: #094771;
-            }
-            QTreeWidget::item:hover {
-                background-color: #2a2d2e;
-            }
-            QHeaderView::section {
-                background-color: #333333;
-                color: #cccccc;
-                padding: 5px;
-                border: none;
-            }
-        """)
+        # 样式由全局 QSS 主题控制，此处不设置硬编码样式
 
         # 允许右键菜单
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

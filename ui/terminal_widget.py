@@ -60,15 +60,7 @@ class TerminalWidget(QWidget):
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
         self.output.setFont(QFont("JetBrains Mono", 11))
-        self.output.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #0D0D0D;
-                color: #E0E0E0;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                padding: 8px;
-            }
-        """)
+        # 样式由全局 QSS 主题控制
         layout.addWidget(self.output)
         self.setLayout(layout)
 

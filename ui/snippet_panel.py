@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QDialog, QFormLayout, QMessageBox, QMenu
 )
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont
 import json
 import os
 
@@ -79,20 +80,7 @@ class SnippetPanel(QWidget):
 
         # 片段列表
         self.list_widget = QListWidget()
-        self.list_widget.setStyleSheet("""
-            QListWidget {
-                background-color: #252526;
-                color: #cccccc;
-                border: none;
-            }
-            QListWidget::item {
-                padding: 6px;
-                border-radius: 3px;
-            }
-            QListWidget::item:selected {
-                background-color: #094771;
-            }
-        """)
+        # 样式由全局 QSS 主题控制
         self.list_widget.itemClicked.connect(self.on_item_clicked)
         self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list_widget.customContextMenuRequested.connect(self.show_context_menu)
@@ -210,7 +198,7 @@ class SnippetEditDialog(QDialog):
         self.code_input = QTextEdit()
         self.code_input.setPlaceholderText("代码内容...")
         self.code_input.setText(data.get("code", ""))
-        self.code_input.setStyleSheet("background:#1e1e1e; color:white; font-family: Consolas;")
+        self.code_input.setFont(QFont("JetBrains Mono", 12))
         layout.addRow("代码:", self.code_input)
 
         btn_layout = QHBoxLayout()

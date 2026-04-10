@@ -237,6 +237,8 @@ class MainWindow(QWidget):
 
         # ===== 主布局 =====
         main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(8, 8, 8, 4)
+        main_layout.setSpacing(8)
 
         # ---- 左侧面板：文件树 + 编辑器 + 工具栏 ----
         left_panel = QVBoxLayout()

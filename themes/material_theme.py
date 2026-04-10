@@ -7,7 +7,6 @@ Material Design 3 (Material You) 主题系统
 # Material Design 3 配色 - 柔和浅色主题
 # =========================
 
-# 深色主题 (Dark Theme)
 DARK = {
     "background": "#121212",
     "surface": "#1E1E1E",
@@ -30,41 +29,26 @@ DARK = {
     "tab_unselected": "#808080",
 }
 
-# 浅色主题 (Light Theme) - 柔和护眼配色
+# 浅色主题 - 柔和护眼配色
 LIGHT = {
-    # 背景 - 温暖的米白色，不刺眼
     "background": "#F7F5F0",
     "surface": "#FFFFFF",
     "surface_variant": "#F0EDE8",
     "surface_highlight": "#E8E4DD",
-
-    # 主色调 - 柔和的蓝紫色
     "primary": "#5B6BB8",
     "primary_container": "#E8EBF7",
     "on_primary": "#FFFFFF",
-
-    # 次要色 - 柔和的青色
     "secondary": "#4A9B9B",
     "secondary_container": "#E0F0F0",
     "on_secondary": "#FFFFFF",
-
-    # 错误色 - 柔和的砖红
     "error": "#C45B5B",
     "error_container": "#F9E5E5",
-
-    # 文字 - 深灰而非纯黑，更柔和
     "on_surface": "#3D3D3D",
     "on_surface_variant": "#6B6B6B",
-
-    # 边框 - 浅灰色
     "outline": "#D0CCC5",
     "outline_variant": "#E5E1DA",
-
-    # 代码编辑器 - 暖白色背景
     "code_bg": "#FDFCF8",
     "code_line_number_bg": "#F0EDE8",
-
-    # 标签页
     "tab_selected": "#5B6BB8",
     "tab_unselected": "#8A8A8A",
 }
@@ -85,9 +69,6 @@ def generate_qss(colors: dict) -> str:
         font-size: 13px;
     }}
 
-    /* ========================= */
-    /* 主窗口 */
-    /* ========================= */
     QMainWindow, QWidget {{
         background-color: {c['background']};
     }}
@@ -145,9 +126,10 @@ def generate_qss(colors: dict) -> str:
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
         border-radius: 6px;
-        padding: 6px 14px;
+        padding: 5px 14px;
         font-weight: 500;
         font-size: 12px;
+        min-height: 22px;
     }}
     QPushButton:hover {{
         background-color: {c['primary_container']};
@@ -171,11 +153,12 @@ def generate_qss(colors: dict) -> str:
         border: 1px solid {c['outline_variant']};
         border-radius: 8px;
         background-color: {c['surface']};
+        top: -1px;
     }}
     QTabBar::tab {{
         background-color: transparent;
         color: {c['on_surface_variant']};
-        padding: 8px 14px;
+        padding: 7px 14px;
         border: none;
         border-bottom: 2px solid transparent;
         font-size: 12px;
@@ -201,15 +184,16 @@ def generate_qss(colors: dict) -> str:
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
         border-radius: 6px;
-        padding: 6px 10px;
+        padding: 5px 10px;
         font-size: 13px;
+        min-height: 22px;
     }}
     QLineEdit:focus {{
         border: 2px solid {c['primary']};
     }}
 
     /* ========================= */
-    /* QTextEdit / QPlainTextEdit - 代码编辑器 */
+    /* QTextEdit / QPlainTextEdit */
     /* ========================= */
     QTextEdit, QPlainTextEdit {{
         background-color: {c['code_bg']};
@@ -292,6 +276,7 @@ def generate_qss(colors: dict) -> str:
         padding: 5px 8px;
         border-radius: 4px;
         margin: 1px 4px;
+        min-height: 18px;
     }}
     QTreeWidget::item:selected {{
         background-color: {c['primary_container']};
@@ -299,6 +284,14 @@ def generate_qss(colors: dict) -> str:
     }}
     QTreeWidget::item:hover {{
         background-color: {c['surface_highlight']};
+    }}
+    QTreeWidget QHeaderView::section {{
+        background-color: {c['surface_variant']};
+        color: {c['on_surface_variant']};
+        padding: 6px 8px;
+        border: none;
+        border-radius: 4px;
+        font-weight: 500;
     }}
 
     /* ========================= */
@@ -316,6 +309,7 @@ def generate_qss(colors: dict) -> str:
         padding: 6px 10px;
         border-radius: 6px;
         margin: 2px 4px;
+        min-height: 18px;
     }}
     QListWidget::item:selected {{
         background-color: {c['primary_container']};
@@ -349,7 +343,8 @@ def generate_qss(colors: dict) -> str:
         color: {c['on_surface']};
         border: 1px solid {c['outline_variant']};
         border-radius: 6px;
-        padding: 6px 10px;
+        padding: 5px 10px;
+        min-height: 22px;
     }}
     QComboBox:hover {{
         border-color: {c['outline']};
@@ -392,6 +387,46 @@ def generate_qss(colors: dict) -> str:
     QCheckBox::indicator:checked {{
         background-color: {c['primary']};
         border-color: {c['primary']};
+    }}
+
+    /* ========================= */
+    /* QFrame */
+    /* ========================= */
+    QFrame {{
+        background-color: {c['surface']};
+        border-radius: 8px;
+    }}
+
+    /* ========================= */
+    /* QGroupBox */
+    /* ========================= */
+    QGroupBox {{
+        border: 1px solid {c['outline_variant']};
+        border-radius: 8px;
+        margin-top: 10px;
+        padding-top: 14px;
+        font-weight: 500;
+    }}
+    QGroupBox::title {{
+        subcontrol-origin: margin;
+        left: 12px;
+        padding: 0 6px;
+        color: {c['primary']};
+    }}
+
+    /* ========================= */
+    /* QSpinBox / QDoubleSpinBox */
+    /* ========================= */
+    QSpinBox, QDoubleSpinBox {{
+        background-color: {c['surface']};
+        color: {c['on_surface']};
+        border: 1px solid {c['outline_variant']};
+        border-radius: 6px;
+        padding: 5px 10px;
+        min-height: 22px;
+    }}
+    QSpinBox:focus, QDoubleSpinBox:focus {{
+        border: 2px solid {c['primary']};
     }}
 """
 

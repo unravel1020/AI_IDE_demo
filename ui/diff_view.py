@@ -12,7 +12,7 @@ class DiffSideEdit(QPlainTextEdit):
         super().__init__(parent)
         self.setReadOnly(True)
         self.setFont(QFont("Consolas", 10))
-        self.setStyleSheet("background:#1e1e1e; color:white;")
+        # 样式由全局 QSS 主题控制
         # 关闭自动换行，保持行对齐
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
 

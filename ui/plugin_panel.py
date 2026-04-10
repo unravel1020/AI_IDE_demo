@@ -25,36 +25,17 @@ class PluginPanel(QWidget):
 
         # 标题
         title = QLabel("🔌 插件管理")
-        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #BB86FC;")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
 
         # 说明
         desc = QLabel("启用/禁用插件，点击插件查看详情")
-        desc.setStyleSheet("color: #A0A0A0; font-size: 12px;")
+        desc.setStyleSheet("font-size: 12px;")
         layout.addWidget(desc)
 
         # 插件列表
         self.list_widget = QListWidget()
-        self.list_widget.setStyleSheet("""
-            QListWidget {
-                background-color: #1E1E1E;
-                color: #E0E0E0;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                padding: 4px;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-radius: 6px;
-                margin: 4px;
-            }
-            QListWidget::item:selected {
-                background-color: #4A4458;
-            }
-            QListWidget::item:hover {
-                background-color: #2D2D2D;
-            }
-        """)
+        # 样式由全局 QSS 主题控制
         self.list_widget.itemClicked.connect(self.on_item_clicked)
         layout.addWidget(self.list_widget)
 
@@ -70,7 +51,7 @@ class PluginPanel(QWidget):
 
         # 详情区域
         self.detail_label = QLabel("点击插件查看详情")
-        self.detail_label.setStyleSheet("color: #A0A0A0; padding: 10px;")
+        self.detail_label.setStyleSheet("padding: 10px;")
         self.detail_label.setWordWrap(True)
         layout.addWidget(self.detail_label)
 
