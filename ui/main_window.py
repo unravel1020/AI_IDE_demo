@@ -1233,18 +1233,23 @@ class MainWindow(ElaWindow):
     # =========================
     def open_search_panel(self):
         """打开项目内搜索面板"""
-        # 获取当前项目路径（从文件树）
-        root_path = self.file_tree.root_path
+        try:
+            # 获取当前项目路径（从文件树）
+            root_path = self.file_tree.root_path
 
-        if not root_path:
-            # 如果没有打开文件夹，尝试使用当前文件所在目录
-            # 或者提示用户先打开文件夹
-            self.tab_analysis.setHtml("<p>⚠️ 请先打开一个项目文件夹（文件 → 打开文件夹）</p>")
-            return
+            if not root_path:
+                self.tab_analysis.setHtml("<p>⚠️ 请先打开一个项目文件夹（文件 → 打开文件夹）</p>")
+                return
 
-        panel = SearchPanel(self, root_path)
-        panel.goto_line.connect(self._on_search_goto)
-        panel.exec()
+            # 使用非模态窗口，避免 exec() 可能的问题
+            self._search_panel = SearchPanel(self, root_path)
+            self._search_panel.goto_line.connect(self._on_search_goto)
+            self._search_panel.show()
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] open_search_panel: {e}")
+            traceback.print_exc()
+            self.tab_analysis.setHtml(f'<p style="color:red;">搜索面板错误: {e}</p>')
 
     def _on_search_goto(self, file_path: str, line_no: int):
         """从搜索结果跳转到文件行"""

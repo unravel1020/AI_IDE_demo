@@ -113,15 +113,19 @@ class SearchPanel(QDialog):
 
     def __init__(self, parent=None, root_path=None):
         super().__init__(parent)
+        print("[SearchPanel] init start")
         self.root_path = root_path or ""
         self.worker = None
         self.result_items = []  # 缓存结果项
 
         self.setWindowTitle("项目内搜索")
         self.resize(700, 500)
+        print("[SearchPanel] calling init_ui")
         self.init_ui()
+        print("[SearchPanel] init done")
 
     def init_ui(self):
+        print("[SearchPanel] init_ui start")
         layout = QVBoxLayout()
         layout.setSpacing(10)
 
@@ -204,9 +208,11 @@ class SearchPanel(QDialog):
         layout.addLayout(btn_layout)
 
         self.setLayout(layout)
+        print("[SearchPanel] layout set")
 
         # 聚焦到搜索框
         self.search_input.setFocus()
+        print("[SearchPanel] init_ui done")
 
     def set_root_path(self, path: str):
         """设置搜索根目录"""
