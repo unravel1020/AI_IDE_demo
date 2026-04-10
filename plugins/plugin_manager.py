@@ -23,6 +23,9 @@ class PluginManager:
         """设置主窗口引用"""
         self._main_window = main_window
 
+    # 系统文件，不应作为插件加载
+    SYSTEM_FILES = {"plugin_base.py", "plugin_manager.py", "__init__.py"}
+
     def load_all_plugins(self):
         """加载所有插件"""
         self.plugins.clear()
@@ -32,8 +35,8 @@ class PluginManager:
 
         # 遍历插件目录
         for item in os.listdir(self.plugin_dir):
-            # 跳过 __pycache__ 和 examples
-            if item.startswith("_") or item == "examples":
+            # 跳过系统文件、__pycache__ 和 examples
+            if item.startswith("_") or item == "examples" or item in self.SYSTEM_FILES:
                 continue
 
             plugin_path = os.path.join(self.plugin_dir, item)
@@ -45,7 +48,7 @@ class PluginManager:
                     self._load_from_path(plugin_path, item)
 
             # 处理单文件插件
-            elif item.endswith(".py") and not item.startswith("_"):
+            elif item.endswith(".py"):
                 self._load_from_file(plugin_path, item[:-3])
 
     def _load_from_path(self, path: str, name: str):
