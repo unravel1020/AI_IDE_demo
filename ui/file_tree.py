@@ -29,7 +29,8 @@ class FileTree(QTreeWidget):
         self.setHeaderLabel("📁 项目文件")
         self.setColumnCount(1)
 
-        # 样式由全局 QSS 主题控制，此处不设置硬编码样式
+        # 应用主题
+        self.apply_theme()
 
         # 允许右键菜单
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -37,6 +38,42 @@ class FileTree(QTreeWidget):
 
         # 点击事件
         self.itemClicked.connect(self._on_item_clicked)
+
+    def apply_theme(self):
+        """应用当前主题"""
+        from PyQt6ElaWidgetTools import ElaTheme, ElaThemeType
+        is_dark = ElaTheme.getInstance().getThemeMode() == ElaThemeType.ThemeMode.Dark
+
+        if is_dark:
+            self.setStyleSheet("""
+                QTreeWidget {
+                    background-color: #1e1e1e;
+                    color: #d4d4d4;
+                    border: none;
+                }
+                QTreeWidget::item {
+                    padding: 4px 2px;
+                }
+                QTreeWidget::item:selected {
+                    background-color: #094771;
+                    color: #ffffff;
+                }
+                QTreeWidget::item:hover {
+                    background-color: #2a2d2e;
+                }
+                QHeaderView::section {
+                    background-color: #2d2d30;
+                    color: #cccccc;
+                    padding: 6px;
+                    border: none;
+                }
+            """)
+        else:
+            self.setStyleSheet("")
+
+    def set_code_item_color(self, color: str):
+        """设置代码文件项的前景色（适配主题）"""
+        self._code_color = QColor(color)
 
         # 双击事件
         self.itemDoubleClicked.connect(self._on_item_double_clicked)

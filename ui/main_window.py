@@ -2,13 +2,13 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout,
     QPushButton, QApplication,
     QFileDialog, QMenuBar, QTabWidget, QTextBrowser, QLabel,
-    QSplitter, QWidget
+    QSplitter, QWidget, QStackedWidget, QSizePolicy
 )
 from PyQt6.QtCore import QThread, pyqtSignal, QUrl, Qt, QTimer
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import QTextEdit
 
-from PyQt6ElaWidgetTools import ElaWindow
+from PyQt6ElaWidgetTools import ElaWindow, ElaTheme, ElaThemeType
 
 from analyzer.cpp_analyzer import CppAnalyzer
 from analyzer.code_fixer import CodeFixer
@@ -28,14 +28,14 @@ from ui.plugin_panel import PluginPanel
 from ui.chat_panel import ChatPanel
 from plugins.plugin_manager import PluginManager
 
-import qtawesome as qta
-
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.config import get_config, reload_config
 from utils.history import add_history, get_history_list, get_history_detail, delete_history, clear_history
 from utils.report_exporter import ReportExporter
+
+import qtawesome as qta
 
 
 # =========================
@@ -129,9 +129,9 @@ class ExplainWorker(QThread):
 
 class BatchAnalyzeWorker(QThread):
     """批量分析工作线程"""
-    file_started = pyqtSignal(str)   # 开始分析某个文件
-    file_finished = pyqtSignal(str, dict)  # 某个文件分析完成
-    all_finished = pyqtSignal(list)  # 全部完成
+    file_started = pyqtSignal(str)
+    file_finished = pyqtSignal(str, dict)
+    all_finished = pyqtSignal(list)
     error = pyqtSignal(str)
 
     def __init__(self, analyzer, file_list):
@@ -193,7 +193,10 @@ class MainWindow(ElaWindow):
         self.auto_analyze_timer.setSingleShot(True)
         self.auto_analyze_timer.timeout.connect(self.on_auto_analyze)
 
-        self.init_ui()  # 内部完成所有组件创建和初始化
+        self._nav_buttons = []
+        self._page_stack = None
+
+        self.init_ui()
 
     def init_ui(self):
         # ===== 菜单 =====
@@ -241,31 +244,63 @@ class MainWindow(ElaWindow):
         self.setMenuBar(menu_bar)
 
         # =========================
-        # 页面1: 工作台
+        # 创建所有子组件（先创建，后布局）
         # =========================
+        # 文件树
+        self.file_tree = FileTree()
+        self.file_tree.setMaximumWidth(240)
+        self.file_tree.file_clicked.connect(self.load_file_from_tree)
+
+        # 代码编辑器
+        self.code_input = CodeEditor()
+        self.code_input.setFont(QFont("JetBrains Mono", 12))
+        self.highlighter = CppHighlighter(self.code_input.document(), theme="light")
+
+        # Tab 组件
+        self.tabs = QTabWidget()
+        self.tab_analysis = QTextBrowser()
+        self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
+        self.tab_fix = CodeEditor()
+        self.tab_fix.setReadOnly(True)
+        self.tab_agent = CodeEditor()
+        self.tab_agent.setReadOnly(True)
+        for tab in [self.tab_fix, self.tab_agent]:
+            tab.setFont(QFont("JetBrains Mono", 11))
+        self.highlighter_fix = CppHighlighter(self.tab_fix.document(), theme="light")
+        self.highlighter_agent = CppHighlighter(self.tab_agent.document(), theme="light")
+        self.tab_diff = DiffView()
+        self.tab_diff.set_highlighter(CppHighlighter, "both")
+        self.tabs.addTab(self.tab_analysis, "分析结果")
+        self.tabs.addTab(self.tab_fix, "修复代码")
+        self.tabs.addTab(self.tab_diff, "Diff对比")
+        self.tabs.addTab(self.tab_agent, "Agent输出")
+
+        # 其他页面组件
+        self.chat_panel = ChatPanel()
+        self.tab_history = QTextBrowser()
+        self.tab_snippets = SnippetPanel()
+        self.tab_snippets.snippet_selected.connect(self.insert_snippet)
+        self.tab_terminal = TerminalWidget()
+        self.tab_plugins = PluginPanel(self.plugin_manager)
+
+        # =========================
+        # 组装各页面
+        # =========================
+
+        # ---- 页面1: 工作台 ----
         workbench_widget = QWidget()
         workbench_layout = QVBoxLayout(workbench_widget)
         workbench_layout.setContentsMargins(8, 8, 8, 4)
         workbench_layout.setSpacing(8)
 
-        # ---- 编辑器区域：文件树 + 代码编辑器 ----
+        # 编辑器区域：文件树 + 代码编辑器
         editor_splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        self.file_tree = FileTree(self)
-        self.file_tree.setMaximumWidth(240)
-        self.file_tree.file_clicked.connect(self.load_file_from_tree)
-
-        self.code_input = CodeEditor()
-        self.code_input.setParent(self)
-        self.code_input.setFont(QFont("JetBrains Mono", 12))
-        self.highlighter = CppHighlighter(self.code_input.document(), theme="light")
-
         editor_splitter.addWidget(self.file_tree)
         editor_splitter.addWidget(self.code_input)
         editor_splitter.setSizes([200, 800])
         editor_splitter.setHandleWidth(3)
 
-        # 工具栏：操作按钮
+        # 工具栏
         toolbar_layout = QHBoxLayout()
         toolbar_layout.setSpacing(6)
 
@@ -282,12 +317,15 @@ class MainWindow(ElaWindow):
         self.btn_explain = QPushButton("解释")
         self.btn_explain.setIcon(qta.icon('fa5s.book'))
 
-        self.btn_analyze.setToolTip("分析代码 (Ctrl+R)")
-        self.btn_fix.setToolTip("修复代码 (Ctrl+Shift+H)")
-        self.btn_agent.setToolTip("AI 智能分析")
-        self.btn_explain.setToolTip("解释代码 (Ctrl+E)")
-        self.btn_format.setToolTip("格式化代码 (Ctrl+Shift+G)")
-        self.btn_batch.setToolTip("批量分析 (Ctrl+B)")
+        for btn, tooltip in [
+            (self.btn_analyze, "分析代码 (Ctrl+R)"),
+            (self.btn_fix, "修复代码 (Ctrl+Shift+H)"),
+            (self.btn_agent, "AI 智能分析"),
+            (self.btn_explain, "解释代码 (Ctrl+E)"),
+            (self.btn_format, "格式化代码 (Ctrl+Shift+G)"),
+            (self.btn_batch, "批量分析 (Ctrl+B)"),
+        ]:
+            btn.setToolTip(tooltip)
 
         self.btn_analyze.clicked.connect(self.on_analyze)
         self.btn_fix.clicked.connect(self.on_fix)
@@ -313,35 +351,6 @@ class MainWindow(ElaWindow):
         editor_widget = QWidget()
         editor_widget.setLayout(editor_area)
 
-        # ---- 底部 TabWidget：4个核心tab ----
-        self.tabs = QTabWidget()
-
-        self.tab_analysis = QTextBrowser()
-        self.tab_analysis.setParent(self)
-        self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
-
-        self.tab_fix = CodeEditor()
-        self.tab_fix.setParent(self)
-        self.tab_fix.setReadOnly(True)
-
-        self.tab_agent = CodeEditor()
-        self.tab_agent.setParent(self)
-        self.tab_agent.setReadOnly(True)
-
-        for tab in [self.tab_fix, self.tab_agent]:
-            tab.setFont(QFont("JetBrains Mono", 11))
-
-        self.highlighter_fix = CppHighlighter(self.tab_fix.document(), theme="light")
-        self.highlighter_agent = CppHighlighter(self.tab_agent.document(), theme="light")
-
-        self.tab_diff = DiffView()
-        self.tab_diff.set_highlighter(CppHighlighter, "both")
-
-        self.tabs.addTab(self.tab_analysis, "分析结果")
-        self.tabs.addTab(self.tab_fix, "修复代码")
-        self.tabs.addTab(self.tab_diff, "Diff对比")
-        self.tabs.addTab(self.tab_agent, "Agent输出")
-
         # 工作台主分割器：编辑器区域 | 底部 tabs
         workbench_splitter = QSplitter(Qt.Orientation.Vertical)
         workbench_splitter.addWidget(editor_widget)
@@ -357,68 +366,221 @@ class MainWindow(ElaWindow):
         self.progress_label.setStyleSheet("font-weight: 500; padding: 4px;")
         workbench_layout.addWidget(self.progress_label)
 
-        self.addPageNode("工作台", workbench_widget, "Home")
-
-        # =========================
-        # 页面2: AI助手
-        # =========================
+        # ---- 页面2: AI助手 ----
         ai_widget = QWidget()
         ai_layout = QVBoxLayout(ai_widget)
         ai_layout.setContentsMargins(8, 8, 8, 8)
-        self.chat_panel = ChatPanel()
-        self.chat_panel.setParent(self)
         ai_layout.addWidget(self.chat_panel)
-        self.addPageNode("AI助手", ai_widget, "Chat")
 
-        # =========================
-        # 页面3: 历史记录
-        # =========================
-        self.tab_history = QTextBrowser()
-        self.tab_history.setParent(self)
+        # ---- 页面3: 历史记录 ----
         history_widget = QWidget()
         history_layout = QVBoxLayout(history_widget)
         history_layout.setContentsMargins(8, 8, 8, 8)
         history_layout.addWidget(self.tab_history)
-        self.addPageNode("历史记录", history_widget, "History")
 
-        # =========================
-        # 页面4: 代码片段
-        # =========================
-        self.tab_snippets = SnippetPanel()
-        self.tab_snippets.setParent(self)
-        self.tab_snippets.snippet_selected.connect(self.insert_snippet)
+        # ---- 页面4: 代码片段 ----
         snippets_widget = QWidget()
         snippets_layout = QVBoxLayout(snippets_widget)
         snippets_layout.setContentsMargins(8, 8, 8, 8)
         snippets_layout.addWidget(self.tab_snippets)
-        self.addPageNode("代码片段", snippets_widget, "Box")
 
-        # =========================
-        # 页面5: 终端
-        # =========================
-        self.tab_terminal = TerminalWidget(self)
+        # ---- 页面5: 终端 ----
         terminal_widget = QWidget()
         terminal_layout = QVBoxLayout(terminal_widget)
         terminal_layout.setContentsMargins(8, 8, 8, 8)
         terminal_layout.addWidget(self.tab_terminal)
-        self.addPageNode("终端", terminal_widget, "Terminal")
 
-        # =========================
-        # 页面6: 插件
-        # =========================
-        self.tab_plugins = PluginPanel(self.plugin_manager)
-        self.tab_plugins.setParent(self)
+        # ---- 页面6: 插件 ----
         plugins_widget = QWidget()
         plugins_layout = QVBoxLayout(plugins_widget)
         plugins_layout.setContentsMargins(8, 8, 8, 8)
         plugins_layout.addWidget(self.tab_plugins)
-        self.addPageNode("插件", plugins_widget, "Plugin")
 
-        # ---- 初始化需要在组件创建后设置的内容 ----
+        # =========================
+        # 左侧导航栏 + 页面栈
+        # =========================
+        nav_widget = QWidget()
+        nav_widget.setFixedWidth(180)
+        nav_layout = QVBoxLayout(nav_widget)
+        nav_layout.setContentsMargins(4, 12, 4, 12)
+        nav_layout.setSpacing(4)
+
+        # 导航标题
+        nav_title = QLabel("AI C++ IDE")
+        nav_title.setStyleSheet("font-size: 16px; font-weight: bold; padding: 8px;")
+        nav_layout.addWidget(nav_title)
+        nav_layout.addSpacing(12)
+
+        # 导航按钮
+        nav_items = [
+            ("工作台", qta.icon('fa5s.home')),
+            ("AI助手", qta.icon('fa5s.comments')),
+            ("历史记录", qta.icon('fa5s.history')),
+            ("代码片段", qta.icon('fa5s.cube')),
+            ("终端", qta.icon('fa5s.terminal')),
+            ("插件", qta.icon('fa5s.puzzle-piece')),
+        ]
+
+        for name, icon in nav_items:
+            btn = QPushButton(name)
+            btn.setIcon(icon)
+            btn.setCheckable(True)
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            btn.clicked.connect(lambda checked, n=name: self._switch_page(n))
+            nav_layout.addWidget(btn)
+            self._nav_buttons.append((name, btn))
+
+        nav_layout.addStretch()
+
+        # 页面栈
+        self._page_stack = QStackedWidget()
+        self._page_stack.addWidget(workbench_widget)
+        self._page_stack.addWidget(ai_widget)
+        self._page_stack.addWidget(history_widget)
+        self._page_stack.addWidget(snippets_widget)
+        self._page_stack.addWidget(terminal_widget)
+        self._page_stack.addWidget(plugins_widget)
+
+        # 主布局
+        main_widget = QWidget()
+        main_layout = QHBoxLayout(main_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(nav_widget)
+        main_layout.addWidget(self._page_stack)
+
+        self.setCentralWidget(main_widget)
+
+        # 默认选中工作台
+        self._switch_page("工作台")
+
+        # 初始化需要在组件创建后设置的内容
         self.search_highlighter = SearchHighlighter(self.code_input)
         self.init_shortcuts()
         self.init_status_bar()
         self.init_auto_analyze()
+
+        # 连接主题变化信号
+        ElaTheme.getInstance().themeModeChanged.connect(self.apply_theme)
+
+        # 应用当前主题
+        self.apply_theme()
+
+    def apply_theme(self):
+        """应用当前主题到所有自定义组件"""
+        from PyQt6ElaWidgetTools import ElaTheme, ElaThemeType
+        is_dark = ElaTheme.getInstance().getThemeMode() == ElaThemeType.ThemeMode.Dark
+
+        if is_dark:
+            # 深色主题样式
+            tab_style = """
+                QTabWidget::pane { border: none; background: #1e1e1e; }
+                QTabBar::tab {
+                    background: #2d2d30;
+                    color: #cccccc;
+                    padding: 6px 16px;
+                    border: none;
+                    margin-right: 2px;
+                }
+                QTabBar::tab:selected { background: #1e1e1e; color: #ffffff; }
+                QTabBar::tab:hover { background: #3e3e42; }
+            """
+            browser_style = """
+                QTextBrowser {
+                    background-color: #1e1e1e;
+                    color: #d4d4d4;
+                    border: none;
+                }
+            """
+            nav_btn_style = """
+                QPushButton {
+                    background: transparent;
+                    color: #cccccc;
+                    border: none;
+                    padding: 8px 12px;
+                    text-align: left;
+                }
+                QPushButton:hover { background: #3c3c3c; }
+                QPushButton:checked { background: #094771; color: #ffffff; }
+            """
+            splitter_handle = """
+                QSplitter::handle { background: #3c3c3c; }
+            """
+        else:
+            # 浅色主题样式
+            tab_style = """
+                QTabWidget::pane { border: none; background: #ffffff; }
+                QTabBar::tab {
+                    background: #f0f0f0;
+                    color: #333333;
+                    padding: 6px 16px;
+                    border: none;
+                    margin-right: 2px;
+                }
+                QTabBar::tab:selected { background: #ffffff; color: #000000; border-bottom: 2px solid #0078d4; }
+                QTabBar::tab:hover { background: #e5e5e5; }
+            """
+            browser_style = """
+                QTextBrowser {
+                    background-color: #ffffff;
+                    color: #1e1e1e;
+                    border: none;
+                }
+            """
+            nav_btn_style = """
+                QPushButton {
+                    background: transparent;
+                    color: #333333;
+                    border: none;
+                    padding: 8px 12px;
+                    text-align: left;
+                }
+                QPushButton:hover { background: #e5e5e5; }
+                QPushButton:checked { background: #0078d4; color: #ffffff; }
+            """
+            splitter_handle = """
+                QSplitter::handle { background: #d4d4d4; }
+            """
+
+        # 应用到各组件
+        self.tabs.setStyleSheet(tab_style)
+        self.tab_analysis.setStyleSheet(browser_style)
+        self.tab_history.setStyleSheet(browser_style)
+
+        # 编辑器主题
+        for editor in [self.code_input, self.tab_fix, self.tab_agent]:
+            if hasattr(editor, 'apply_theme'):
+                editor.apply_theme()
+
+        # 文件树
+        if hasattr(self, 'file_tree') and self.file_tree:
+            self.file_tree.apply_theme()
+
+        # 导航按钮
+        for _, btn in self._nav_buttons:
+            btn.setStyleSheet(nav_btn_style)
+
+        # 工具栏按钮
+        toolbar_btn_style = nav_btn_style if is_dark else nav_btn_style
+        for btn in [self.btn_analyze, self.btn_fix, self.btn_agent,
+                    self.btn_format, self.btn_batch, self.btn_explain]:
+            btn.setStyleSheet(nav_btn_style)
+
+    def _switch_page(self, name: str):
+        """切换页面"""
+        page_map = {
+            "工作台": 0,
+            "AI助手": 1,
+            "历史记录": 2,
+            "代码片段": 3,
+            "终端": 4,
+            "插件": 5,
+        }
+        if name in page_map:
+            self._page_stack.setCurrentIndex(page_map[name])
+            # 更新按钮状态
+            for btn_name, btn in self._nav_buttons:
+                btn.setChecked(btn_name == name)
 
     # =========================
     # 按钮状态管理
@@ -437,13 +599,11 @@ class MainWindow(ElaWindow):
     def open_folder(self):
         """打开项目文件夹"""
         try:
-            print("[DEBUG] open_folder: calling file_tree.open_folder_dialog")
             folder = self.file_tree.open_folder_dialog()
-            print(f"[DEBUG] open_folder: folder={folder}")
             if folder:
                 self.tab_analysis.setHtml(f"<p>已打开文件夹: {folder}</p>")
         except Exception as e:
-            print(f"[DEBUG] open_folder ERROR: {e}")
+            print(f"[ERROR] open_folder: {e}")
             import traceback
             traceback.print_exc()
 
@@ -454,28 +614,20 @@ class MainWindow(ElaWindow):
                 self.code_input.setPlainText(f.read())
             self.tab_terminal.set_current_file(file_path)
         except Exception as e:
-            self.tab_analysis.setHtml(f'<p style="color:red;">❌ 无法读取文件: {e}</p>')
+            self.tab_analysis.setHtml(f'<p style="color:red;">无法读取文件: {e}</p>')
 
     def open_file(self):
         try:
-            print("[DEBUG] open_file: showing dialog")
             file_path, _ = QFileDialog.getOpenFileName(
                 None, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)",
                 options=QFileDialog.Option.DontUseNativeDialog
             )
-            print(f"[DEBUG] open_file: path={file_path}")
             if file_path:
-                print("[DEBUG] open_file: reading file")
                 with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                print(f"[DEBUG] open_file: read {len(content)} chars")
-                print("[DEBUG] open_file: setting code_input")
-                self.code_input.setPlainText(content)
-                print("[DEBUG] open_file: set_current_file")
+                    self.code_input.setPlainText(f.read())
                 self.tab_terminal.set_current_file(file_path)
-                print("[DEBUG] open_file: done")
         except Exception as e:
-            print(f"[DEBUG] open_file ERROR: {e}")
+            print(f"[ERROR] open_file: {e}")
             import traceback
             traceback.print_exc()
 
@@ -501,8 +653,8 @@ class MainWindow(ElaWindow):
             return
 
         self.set_buttons_enabled(False)
-        self.progress_label.setText("🔄 分析中...")
-        self.tab_analysis.setHtml("<p>🔍 分析中...</p>")
+        self.progress_label.setText("分析中...")
+        self.tab_analysis.setHtml("<p>分析中...</p>")
 
         self.worker = AnalyzeWorker(self.analyzer, code)
         self.worker.finished.connect(self.show_analysis)
@@ -534,7 +686,7 @@ class MainWindow(ElaWindow):
         code = self.code_input.toPlainText()
         result = self.plugin_manager.call_after_analyze(code, result)
 
-        html = "<h3>📊 分析结果</h3>"
+        html = "<h3>分析结果</h3>"
 
         # 插件消息
         if "_plugin_message" in result:
@@ -543,14 +695,14 @@ class MainWindow(ElaWindow):
             html += f'<p>{result.pop("_plugin_hello")}</p>'
         if "_plugin_stats" in result:
             stats = result.pop("_plugin_stats")
-            html += f'<p>📊 代码: {stats["total_lines"]}行 | 函数: {stats["functions"]} | 注释: {stats["comment_ratio"]}%</p>'
+            html += f'<p>代码: {stats["total_lines"]}行 | 函数: {stats["functions"]} | 注释: {stats["comment_ratio"]}%</p>'
 
         # 总结
         summary = result.get("summary", "")
         complexity = result.get("complexity", "unknown")
         if summary:
-            html += f'<p><b>📝 总结：</b>{summary}</p>'
-            html += f'<p><b>📈 复杂度：</b>{complexity}</p>'
+            html += f'<p><b>总结：</b>{summary}</p>'
+            html += f'<p><b>复杂度：</b>{complexity}</p>'
             html += '<hr>'
 
         lines_to_highlight = []
@@ -558,14 +710,14 @@ class MainWindow(ElaWindow):
 
         # 遍历所有问题类别
         categories = [
-            ("🐛 Bugs", "bugs"),
-            ("🔒 安全问题", "security"),
-            ("🧵 线程问题", "thread_issues"),
-            ("💾 内存问题", "memory_issues"),
-            ("📖 可读性", "readability"),
-            ("🔧 可维护性", "maintainability"),
-            ("⚡ 性能", "performance"),
-            ("💡 优化建议", "suggestions")
+            ("Bugs", "bugs"),
+            ("安全问题", "security"),
+            ("线程问题", "thread_issues"),
+            ("内存问题", "memory_issues"),
+            ("可读性", "readability"),
+            ("可维护性", "maintainability"),
+            ("性能", "performance"),
+            ("优化建议", "suggestions")
         ]
 
         for title, key in categories:
@@ -613,7 +765,7 @@ class MainWindow(ElaWindow):
             self.tab_history.setHtml("<p>暂无历史记录</p>")
             return
 
-        html = "<h3>📜 分析历史</h3>"
+        html = "<h3>分析历史</h3>"
         html += f'<p>共 {len(history)} 条记录</p><hr>'
 
         for h in history:
@@ -697,7 +849,7 @@ class MainWindow(ElaWindow):
             return
 
         self.set_buttons_enabled(False)
-        self.progress_label.setText("🔄 修复中...")
+        self.progress_label.setText("修复中...")
         self.tab_fix.setPlainText("修复中...")
 
         self.worker = FixWorker(self.fixer, code)
@@ -722,7 +874,7 @@ class MainWindow(ElaWindow):
             return
 
         self.set_buttons_enabled(False)
-        self.progress_label.setText("🔄 AI思考中...")
+        self.progress_label.setText("AI思考中...")
         self.tab_agent.setPlainText("AI思考中...")
 
         self.worker = AgentWorker(self.agent, code)
@@ -747,8 +899,8 @@ class MainWindow(ElaWindow):
             return
 
         self.set_buttons_enabled(False)
-        self.progress_label.setText("📖 解释中...")
-        self.tab_analysis.setHtml("<p>📖 AI 正在解释代码...</p>")
+        self.progress_label.setText("解释中...")
+        self.tab_analysis.setHtml("<p>AI 正在解释代码...</p>")
 
         self.worker = ExplainWorker(self.explainer, code)
         self.worker.finished.connect(self.show_explain)
@@ -758,7 +910,7 @@ class MainWindow(ElaWindow):
     def show_explain(self, result: str):
         """显示代码解释"""
         # 将纯文本转换为 HTML
-        html = "<h3>📖 代码解释</h3><pre style='white-space:pre-wrap;'>"
+        html = "<h3>代码解释</h3><pre style='white-space:pre-wrap;'>"
         html += result.replace('<', '&lt;').replace('>', '&gt;')
         html += "</pre>"
         self.tab_analysis.setHtml(html)
@@ -784,8 +936,8 @@ class MainWindow(ElaWindow):
             return
 
         self.set_buttons_enabled(False)
-        self.progress_label.setText(f"📑 批量分析 0/{len(file_paths)}...")
-        self.tab_analysis.setHtml(f"<p>📑 开始批量分析 {len(file_paths)} 个文件...</p>")
+        self.progress_label.setText(f"批量分析 0/{len(file_paths)}...")
+        self.tab_analysis.setHtml(f"<p>开始批量分析 {len(file_paths)} 个文件...</p>")
 
         self.batch_results = []
         self.batch_worker = BatchAnalyzeWorker(self.analyzer, file_paths)
@@ -796,11 +948,11 @@ class MainWindow(ElaWindow):
         self.batch_worker.start()
 
     def _on_batch_file_started(self, file_path: str):
-        self.progress_label.setText(f"📑 分析: {os.path.basename(file_path)}...")
+        self.progress_label.setText(f"分析: {os.path.basename(file_path)}...")
 
     def _on_batch_file_finished(self, file_path: str, result: dict):
         self.batch_results.append(result)
-        self.progress_label.setText(f"📑 已完成 {len(self.batch_results)} 个文件")
+        self.progress_label.setText(f"已完成 {len(self.batch_results)} 个文件")
 
     def _on_batch_all_finished(self, results: list):
         self.set_buttons_enabled(True)
@@ -813,7 +965,7 @@ class MainWindow(ElaWindow):
             self.tab_analysis.setHtml("<p>批量分析完成，无结果</p>")
             return
 
-        html = "<h3>📑 批量分析结果汇总</h3>"
+        html = "<h3>批量分析结果汇总</h3>"
         html += f'<p>共分析 {len(results)} 个文件</p><hr>'
 
         for r in results:
@@ -845,8 +997,8 @@ class MainWindow(ElaWindow):
             return
 
         self.set_buttons_enabled(False)
-        self.progress_label.setText("✨ 格式化中...")
-        self.tab_analysis.setHtml("<p>✨ 格式化中...</p>")
+        self.progress_label.setText("格式化中...")
+        self.tab_analysis.setHtml("<p>格式化中...</p>")
 
         self.worker = FormatWorker(self.formatter, code, style)
         self.worker.finished.connect(self.show_formatted)
@@ -856,7 +1008,7 @@ class MainWindow(ElaWindow):
     def show_formatted(self, result):
         """显示格式化结果"""
         self.code_input.setPlainText(result)
-        self.tab_analysis.setHtml("<p>✅ 代码已格式化</p>")
+        self.tab_analysis.setHtml("<p>代码已格式化</p>")
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
 
@@ -881,9 +1033,9 @@ class MainWindow(ElaWindow):
                     result,
                     file_path=file_path
                 )
-                self.tab_analysis.setHtml(f"<p>✅ 报告已导出:<br>{path}</p>")
+                self.tab_analysis.setHtml(f"<p>报告已导出:<br>{path}</p>")
         except Exception as e:
-            self.tab_analysis.setHtml(f'<p style="color:red;">❌ 导出失败: {e}</p>')
+            self.tab_analysis.setHtml(f'<p style="color:red;">导出失败: {e}</p>')
 
     def export_html(self):
         """导出 HTML 报告"""
@@ -903,9 +1055,9 @@ class MainWindow(ElaWindow):
                     result,
                     file_path=file_path
                 )
-                self.tab_analysis.setHtml(f"<p>✅ 报告已导出:<br>{path}</p>")
+                self.tab_analysis.setHtml(f"<p>报告已导出:<br>{path}</p>")
         except Exception as e:
-            self.tab_analysis.setHtml(f'<p style="color:red;">❌ 导出失败: {e}</p>')
+            self.tab_analysis.setHtml(f'<p style="color:red;">导出失败: {e}</p>')
 
     def _get_last_analysis_result(self):
         """获取最后一次分析结果（从历史记录中）"""
@@ -1023,13 +1175,13 @@ class MainWindow(ElaWindow):
         """切换自动分析开关"""
         self.auto_analyze_enabled = not self.auto_analyze_enabled
         status = "已开启" if self.auto_analyze_enabled else "已关闭"
-        self.tab_analysis.setHtml(f"<p>🔄 实时分析 {status} (修改代码2秒后自动触发)</p>")
+        self.tab_analysis.setHtml(f"<p>实时分析 {status} (修改代码2秒后自动触发)</p>")
 
     def reload_plugins(self):
         """重新加载所有插件"""
         self.plugin_manager.unload_all()
         self.plugin_manager.load_all_plugins()
-        self.tab_analysis.setHtml(f"<p>✅ 插件已重载，共 {len(self.plugin_manager.plugins)} 个</p>")
+        self.tab_analysis.setHtml(f"<p>插件已重载，共 {len(self.plugin_manager.plugins)} 个</p>")
 
     def open_settings(self):
         """打开设置对话框"""
@@ -1037,19 +1189,19 @@ class MainWindow(ElaWindow):
         if dialog.exec() == SettingsDialog.DialogCode.Accepted:
             # 重新加载配置
             reload_config()
-            self.tab_analysis.setHtml("<p>✅ 设置已保存，下次分析生效</p>")
+            self.tab_analysis.setHtml("<p>设置已保存，下次分析生效</p>")
 
     def reload_settings(self):
         """重新加载配置"""
         reload_config()
         config = get_config()
-        self.tab_analysis.setHtml(f"<p>🔄 配置已重载<br>模型: {config.get('model')}<br>温度: {config.get('temperature')}</p>")
+        self.tab_analysis.setHtml(f"<p>配置已重载<br>模型: {config.get('model')}<br>温度: {config.get('temperature')}</p>")
 
     # =========================
     # 错误处理
     # =========================
     def on_error(self, error_msg):
-        self.tab_analysis.setHtml(f'<p style="color:red;">❌ 错误：{error_msg}</p>')
+        self.tab_analysis.setHtml(f'<p style="color:red;">错误：{error_msg}</p>')
         self.set_buttons_enabled(True)
         self.progress_label.setText("")
 
@@ -1103,7 +1255,6 @@ class MainWindow(ElaWindow):
     def init_status_bar(self):
         """初始化状态栏"""
         self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("padding: 4px 8px;")
         self.statusBar().addWidget(self.status_label)
 
     def update_status(self, message: str):

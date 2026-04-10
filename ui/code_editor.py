@@ -34,6 +34,33 @@ class CodeEditor(QPlainTextEdit):
 
         self._last_line = -1
 
+        # 应用当前主题
+        self.apply_theme()
+
+    def apply_theme(self):
+        """应用当前主题颜色"""
+        from PyQt6ElaWidgetTools import ElaTheme, ElaThemeType
+        is_dark = ElaTheme.getInstance().getThemeMode() == ElaThemeType.ThemeMode.Dark
+
+        if is_dark:
+            # 深色主题 (VS Code Dark+)
+            self.setStyleSheet("""
+                QPlainTextEdit {
+                    background-color: #1e1e1e;
+                    color: #d4d4d4;
+                    border: none;
+                }
+            """)
+        else:
+            # 浅色主题
+            self.setStyleSheet("""
+                QPlainTextEdit {
+                    background-color: #ffffff;
+                    color: #1e1e1e;
+                    border: none;
+                }
+            """)
+
     # =========================
     # 行号宽度
     # =========================
@@ -65,12 +92,17 @@ class CodeEditor(QPlainTextEdit):
     def line_number_area_paint_event(self, event):
         painter = QPainter(self.line_number_area)
 
-        # 从调色板动态获取颜色，适配当前主题
-        palette = self.palette()
-        bg_color = palette.color(QPalette.ColorRole.Window).lighter(102)
-        fg_color = palette.color(QPalette.ColorRole.WindowText)
-        # 降低行号文字亮度
-        fg_color.setAlpha(140)
+        from PyQt6ElaWidgetTools import ElaTheme, ElaThemeType
+        is_dark = ElaTheme.getInstance().getThemeMode() == ElaThemeType.ThemeMode.Dark
+
+        if is_dark:
+            bg_color = QColor(30, 30, 30)  # #1e1e1e
+            fg_color = QColor(96, 96, 96)   # 灰色行号
+        else:
+            palette = self.palette()
+            bg_color = palette.color(QPalette.ColorRole.Window).lighter(102)
+            fg_color = palette.color(QPalette.ColorRole.WindowText)
+            fg_color.setAlpha(140)
 
         painter.fillRect(event.rect(), bg_color)
 
