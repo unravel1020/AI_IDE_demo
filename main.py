@@ -21,6 +21,7 @@ def main():
     # 从配置读取主题，默认浅色
     config = load_config()
     theme_name = config.get("theme", "light")
+    print(f"[DEBUG] Config loaded, theme={theme_name}")
     theme_mode = ElaThemeType.ThemeMode.Dark if theme_name == "dark" else ElaThemeType.ThemeMode.Light
     ElaTheme.getInstance().setThemeMode(theme_mode)
 

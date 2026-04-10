@@ -1189,17 +1189,21 @@ class MainWindow(ElaWindow):
 
     def open_settings(self):
         """打开设置对话框"""
+        from utils.config import CONFIG_PATH
         dialog = SettingsDialog(self)
         old_theme = get_config().get("theme", "dark")
+        print(f"[DEBUG] open_settings: old_theme={old_theme}")
 
         if dialog.exec() == SettingsDialog.DialogCode.Accepted:
             # 重新加载配置
             reload_config()
             config = get_config()
+            new_theme = config.get("theme", "dark")
+            print(f"[DEBUG] open_settings: new_theme={new_theme}, path={CONFIG_PATH}")
 
             # 应用主题变更
-            new_theme = config.get("theme", "dark")
             if new_theme != old_theme:
+                print(f"[DEBUG] Theme changed, applying {new_theme}")
                 theme_mode = ElaThemeType.ThemeMode.Dark if new_theme == "dark" else ElaThemeType.ThemeMode.Light
                 ElaTheme.getInstance().setThemeMode(theme_mode)
                 self.apply_theme()
