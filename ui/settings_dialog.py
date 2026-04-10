@@ -110,27 +110,15 @@ class SettingsDialog(QDialog):
 
     def _on_save(self):
         """保存设置"""
-        current_theme_text = self.theme_combo.currentText()
-        theme_value = self.THEME_MAP_REVERSE.get(current_theme_text, "dark")
-        print(f"[DEBUG] Combo currentText: '{current_theme_text}' -> theme: '{theme_value}'")
-
         config = {
             "api_key": self.api_key_input.text().strip(),
             "base_url": self.base_url_input.text().strip() or "https://api.moonshot.cn/v1",
             "model": self.model_combo.currentText(),
             "temperature": self.temp_spin.value(),
-            "theme": theme_value
+            "theme": self.THEME_MAP_REVERSE.get(self.theme_combo.currentText(), "dark")
         }
 
-        import os
-        from utils.config import CONFIG_PATH, save_config
-        print(f"[DEBUG] Saving config to: {CONFIG_PATH}")
         save_config(config)
-        # 验证保存结果
-        import json
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            saved = json.load(f)
-        print(f"[DEBUG] Saved config: {saved}")
         QMessageBox.information(self, "保存成功", "设置已保存")
         self.accept()
 

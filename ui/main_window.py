@@ -462,9 +462,20 @@ class MainWindow(ElaWindow):
 
         # 连接主题变化信号
         ElaTheme.getInstance().themeModeChanged.connect(self.apply_theme)
+        ElaTheme.getInstance().themeModeChanged.connect(self._save_theme_config)
 
         # 应用当前主题
         self.apply_theme()
+
+    def _save_theme_config(self):
+        """主题变化时自动保存到配置文件"""
+        from utils.config import load_config, save_config
+        is_dark = ElaTheme.getInstance().getThemeMode() == ElaThemeType.ThemeMode.Dark
+        theme_name = "dark" if is_dark else "light"
+        config = load_config()
+        if config.get("theme") != theme_name:
+            config["theme"] = theme_name
+            save_config(config)
 
     def apply_theme(self):
         """应用当前主题到所有自定义组件"""
@@ -1189,21 +1200,17 @@ class MainWindow(ElaWindow):
 
     def open_settings(self):
         """打开设置对话框"""
-        from utils.config import CONFIG_PATH
         dialog = SettingsDialog(self)
-        old_theme = get_config().get("theme", "dark")
-        print(f"[DEBUG] open_settings: old_theme={old_theme}")
+        old_theme = get_config().get("theme", "light")
 
         if dialog.exec() == SettingsDialog.DialogCode.Accepted:
             # 重新加载配置
             reload_config()
             config = get_config()
-            new_theme = config.get("theme", "dark")
-            print(f"[DEBUG] open_settings: new_theme={new_theme}, path={CONFIG_PATH}")
+            new_theme = config.get("theme", "light")
 
-            # 应用主题变更
+            # 应用主题变更（配置已保存，只需应用）
             if new_theme != old_theme:
-                print(f"[DEBUG] Theme changed, applying {new_theme}")
                 theme_mode = ElaThemeType.ThemeMode.Dark if new_theme == "dark" else ElaThemeType.ThemeMode.Light
                 ElaTheme.getInstance().setThemeMode(theme_mode)
                 self.apply_theme()
