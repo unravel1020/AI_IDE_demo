@@ -1,13 +1,21 @@
-from PyQt6.QtWidgets import QApplication
-from ui.main_window import MainWindow
-from themes.material_theme import apply_theme
 import sys
+from PyQt6.QtWidgets import QApplication
+from PyQt6ElaWidgetTools import ElaApplication, ElaTheme, ElaThemeType
+from ui.main_window import MainWindow
 
 
 def main():
+    # 先创建 QApplication
     app = QApplication(sys.argv)
-    # 应用 Material Design 深色主题
-    apply_theme(app, theme="dark")
+
+    # ElaApplication 初始化（加载 Fluent 全局样式）
+    ela_app = ElaApplication.getInstance()
+    if ela_app:
+        ela_app.init()
+
+    # 设置浅色主题
+    ElaTheme.getInstance().setThemeMode(ElaThemeType.ThemeMode.Light)
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

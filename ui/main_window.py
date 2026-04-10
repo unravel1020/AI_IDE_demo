@@ -24,8 +24,6 @@ from ui.snippet_panel import SnippetPanel
 from ui.terminal_widget import TerminalWidget
 from ui.plugin_panel import PluginPanel
 from ui.chat_panel import ChatPanel
-from themes.material_theme import get_colors, apply_theme
-
 from plugins.plugin_manager import PluginManager
 
 import sys
@@ -186,10 +184,6 @@ class MainWindow(QWidget):
         # 搜索高亮器（必须在 init_ui 之后，因为 code_input 在 init_ui 中创建）
         self.search_highlighter = SearchHighlighter(self.code_input)
         self.find_dialog = None
-
-        # 应用浅色主题
-        app = QApplication.instance()
-        self.theme_colors = apply_theme(app, "light")
 
         # 实时分析
         self.auto_analyze_enabled = False

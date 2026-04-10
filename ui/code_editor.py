@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QPlainTextEdit, QWidget, QToolTip
-from PyQt6.QtGui import QPainter, QColor, QTextCursor, QCursor
+from PyQt6.QtGui import QPainter, QColor, QTextCursor, QCursor, QPalette
 from PyQt6.QtCore import QRect, QSize
-from themes.material_theme import get_colors
 
 
 class LineNumberArea(QWidget):
@@ -35,9 +34,6 @@ class CodeEditor(QPlainTextEdit):
 
         self._last_line = -1
 
-        # 获取主题颜色
-        self.colors = get_colors("light")
-
     # =========================
     # 行号宽度
     # =========================
@@ -68,7 +64,15 @@ class CodeEditor(QPlainTextEdit):
     # =========================
     def line_number_area_paint_event(self, event):
         painter = QPainter(self.line_number_area)
-        painter.fillRect(event.rect(), QColor(self.colors["code_line_number_bg"]))
+
+        # 从调色板动态获取颜色，适配当前主题
+        palette = self.palette()
+        bg_color = palette.color(QPalette.ColorRole.Window).lighter(102)
+        fg_color = palette.color(QPalette.ColorRole.WindowText)
+        # 降低行号文字亮度
+        fg_color.setAlpha(140)
+
+        painter.fillRect(event.rect(), bg_color)
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -82,7 +86,7 @@ class CodeEditor(QPlainTextEdit):
             line_number = block_number + 1
 
             # 画行号
-            painter.setPen(QColor(self.colors["on_surface_variant"]))
+            painter.setPen(fg_color)
             painter.drawText(
                 0,
                 top,
