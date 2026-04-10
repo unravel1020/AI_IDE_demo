@@ -613,6 +613,8 @@ class MainWindow(ElaWindow):
             with open(file_path, "r", encoding="utf-8") as f:
                 self.code_input.setPlainText(f.read())
             self.tab_terminal.set_current_file(file_path)
+            self._update_file_info(file_path)
+            self.update_status(f"已打开: {os.path.basename(file_path)}")
         except Exception as e:
             self.tab_analysis.setHtml(f'<p style="color:red;">无法读取文件: {e}</p>')
 
@@ -626,6 +628,8 @@ class MainWindow(ElaWindow):
                 with open(file_path, "r", encoding="utf-8") as f:
                     self.code_input.setPlainText(f.read())
                 self.tab_terminal.set_current_file(file_path)
+                self._update_file_info(file_path)
+                self.update_status(f"已打开: {os.path.basename(file_path)}")
         except Exception as e:
             print(f"[ERROR] open_file: {e}")
             import traceback
@@ -1186,10 +1190,21 @@ class MainWindow(ElaWindow):
     def open_settings(self):
         """打开设置对话框"""
         dialog = SettingsDialog(self)
+        old_theme = get_config().get("theme", "dark")
+
         if dialog.exec() == SettingsDialog.DialogCode.Accepted:
             # 重新加载配置
             reload_config()
-            self.tab_analysis.setHtml("<p>设置已保存，下次分析生效</p>")
+            config = get_config()
+
+            # 应用主题变更
+            new_theme = config.get("theme", "dark")
+            if new_theme != old_theme:
+                theme_mode = ElaThemeType.ThemeMode.Dark if new_theme == "dark" else ElaThemeType.ThemeMode.Light
+                ElaTheme.getInstance().setThemeMode(theme_mode)
+                self.apply_theme()
+
+            self.tab_analysis.setHtml("<p>设置已保存</p>")
 
     def reload_settings(self):
         """重新加载配置"""
@@ -1253,9 +1268,50 @@ class MainWindow(ElaWindow):
     # 状态栏
     # =========================
     def init_status_bar(self):
-        """初始化状态栏"""
+        """初始化状态栏 - 多部分信息展示"""
+        # 左侧：动态消息
         self.status_label = QLabel("就绪")
         self.statusBar().addWidget(self.status_label)
+
+        # 右侧：固定信息（永久显示）
+        self.status_position = QLabel("Ln 1, Col 1")
+        self.status_file_type = QLabel("Plain Text")
+        self.status_encoding = QLabel("UTF-8")
+        self.status_file_path = QLabel("")
+
+        for widget in [self.status_position, self.status_file_type,
+                       self.status_encoding, self.status_file_path]:
+            widget.setStyleSheet("padding: 0 8px;")
+            self.statusBar().addPermanentWidget(widget)
+
+        # 连接编辑器光标变化信号
+        self.code_input.cursorPositionChanged.connect(self._update_cursor_position)
+
+    def _update_cursor_position(self):
+        """更新光标位置显示"""
+        cursor = self.code_input.textCursor()
+        line = cursor.blockNumber() + 1
+        col = cursor.columnNumber() + 1
+        self.status_position.setText(f"Ln {line}, Col {col}")
+
+    def _update_file_info(self, file_path: str = ""):
+        """更新文件相关信息"""
+        if file_path:
+            ext = os.path.splitext(file_path)[1].lower()
+            type_map = {
+                ".cpp": "C++",
+                ".c": "C",
+                ".h": "C/C++ Header",
+                ".hpp": "C++ Header",
+                ".cc": "C++",
+                ".cxx": "C++",
+                ".hxx": "C++ Header",
+            }
+            self.status_file_type.setText(type_map.get(ext, ext.upper()[1:] if ext else "Plain Text"))
+            self.status_file_path.setText(os.path.basename(file_path))
+        else:
+            self.status_file_type.setText("Plain Text")
+            self.status_file_path.setText("")
 
     def update_status(self, message: str):
         """更新状态栏消息"""
