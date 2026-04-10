@@ -26,6 +26,7 @@ from ui.snippet_panel import SnippetPanel
 from ui.terminal_widget import TerminalWidget
 from ui.plugin_panel import PluginPanel
 from ui.chat_panel import ChatPanel
+from ui.search_panel import SearchPanel
 from plugins.plugin_manager import PluginManager
 
 import sys
@@ -207,6 +208,10 @@ class MainWindow(ElaWindow):
         a_open_folder.triggered.connect(self.open_folder)
         a_open_file = file_menu.addAction("打开文件")
         a_open_file.triggered.connect(self.open_file)
+        file_menu.addSeparator()
+        a_search = file_menu.addAction("项目内搜索")
+        a_search.setShortcut("Ctrl+Shift+F")
+        a_search.triggered.connect(self.open_search_panel)
         file_menu.addSeparator()
         a_export_md = file_menu.addAction("导出 Markdown 报告")
         a_export_md.triggered.connect(self.export_markdown)
@@ -1224,6 +1229,38 @@ class MainWindow(ElaWindow):
         self.tab_analysis.setHtml(f"<p>配置已重载<br>模型: {config.get('model')}<br>温度: {config.get('temperature')}</p>")
 
     # =========================
+    # 项目内搜索
+    # =========================
+    def open_search_panel(self):
+        """打开项目内搜索面板"""
+        # 获取当前项目路径（从文件树）
+        root_path = self.file_tree.root_path
+
+        if not root_path:
+            # 如果没有打开文件夹，尝试使用当前文件所在目录
+            # 或者提示用户先打开文件夹
+            self.tab_analysis.setHtml("<p>⚠️ 请先打开一个项目文件夹（文件 → 打开文件夹）</p>")
+            return
+
+        panel = SearchPanel(self, root_path)
+        panel.goto_line.connect(self._on_search_goto)
+        panel.exec()
+
+    def _on_search_goto(self, file_path: str, line_no: int):
+        """从搜索结果跳转到文件行"""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                self.code_input.setPlainText(f.read())
+            self._update_file_info(file_path)
+            self.update_status(f"已打开: {os.path.basename(file_path)}")
+
+            # 跳转到指定行
+            if line_no > 0:
+                self.goto_line(line_no)
+        except Exception as e:
+            self.tab_analysis.setHtml(f'<p style="color:red;">无法打开文件: {e}</p>')
+
+    # =========================
     # 错误处理
     # =========================
     def on_error(self, error_msg):
@@ -1266,6 +1303,10 @@ class MainWindow(ElaWindow):
         # Ctrl+B: 批量分析
         shortcut_batch = QShortcut(QKeySequence("Ctrl+B"), self)
         shortcut_batch.activated.connect(self.on_batch_analyze)
+
+        # Ctrl+Shift+F: 项目内搜索
+        shortcut_search = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        shortcut_search.activated.connect(self.open_search_panel)
 
         # Ctrl+F: 查找
         shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self)
