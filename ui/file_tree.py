@@ -111,8 +111,8 @@ class FileTree(QTreeWidget):
             item = QTreeWidgetItem(parent_item)
             item.setText(0, f"📄 {name}")
             item.setData(0, Qt.ItemDataRole.UserRole, full_path)
-            # 代码文件用不同颜色
-            item.setForeground(0, QColor("#4EC9B0"))
+            # 代码文件用主题强调色
+            item.setForeground(0, QColor("#5B6BB8"))
 
     def _on_item_clicked(self, item: QTreeWidgetItem, column: int):
         """单击处理"""

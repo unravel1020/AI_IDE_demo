@@ -64,8 +64,8 @@ class TerminalWidget(QWidget):
         layout.addWidget(self.output)
         self.setLayout(layout)
 
-        self.append_output("🖥️ 终端已就绪\n", "#03DAC6")
-        self.append_output("支持命令: g++, gcc, python, dir, ls 等\n", "#757575")
+        self.append_output("🖥️ 终端已就绪\n")
+        self.append_output("支持命令: g++, gcc, python, dir, ls 等\n")
 
     def set_current_file(self, file_path: str):
         """设置当前 C++ 文件路径"""
@@ -77,15 +77,15 @@ class TerminalWidget(QWidget):
     def compile_current(self):
         """编译当前 C++ 文件"""
         if not self.current_cpp_file or not os.path.exists(self.current_cpp_file):
-            self.append_output("❌ 请先打开一个 C++ 文件\n", "#CF6679")
+            self.append_output("❌ 请先打开一个 C++ 文件\n")
             return
 
         # 生成输出文件名
         base = os.path.splitext(os.path.basename(self.current_cpp_file))[0]
         self.output_executable = os.path.join(self.temp_dir, base + ".exe")
 
-        self.append_output(f"🔨 编译: {self.current_cpp_file}\n", "#BB86FC")
-        self.append_output(f"   输出: {self.output_executable}\n", "#757575")
+        self.append_output(f"🔨 编译: {self.current_cpp_file}\n")
+        self.append_output(f"   输出: {self.output_executable}\n")
 
         cmd = f"g++"
         args = ["-std=c++17", "-Wall", "-g", self.current_cpp_file, "-o", self.output_executable]
@@ -97,11 +97,11 @@ class TerminalWidget(QWidget):
     def run_executable(self):
         """运行编译后的可执行文件"""
         if not self.output_executable or not os.path.exists(self.output_executable):
-            self.append_output("❌ 请先编译代码\n", "#CF6679")
+            self.append_output("❌ 请先编译代码\n")
             return
 
-        self.append_output(f"▶️ 运行: {self.output_executable}\n", "#03DAC6")
-        self.append_output("─" * 40 + "\n", "#494949")
+        self.append_output(f"▶️ 运行: {self.output_executable}\n")
+        self.append_output("─" * 40 + "\n")
 
         self.process.start(self.output_executable, [])
         self.btn_compile.setEnabled(False)
@@ -117,7 +117,7 @@ class TerminalWidget(QWidget):
         cmd = parts[0]
         args = parts[1:] if len(parts) > 1 else []
 
-        self.append_output(f"$ {cmd_text}\n", "#BB86FC")
+        self.append_output(f"$ {cmd_text}\n")
         self.process.start(cmd, args)
         self.cmd_input.clear()
         self.btn_compile.setEnabled(False)
@@ -126,13 +126,13 @@ class TerminalWidget(QWidget):
     def on_stdout(self):
         """标准输出"""
         data = self.process.readAllStandardOutput().data().decode("utf-8", errors="replace")
-        self.append_output(data, "#E0E0E0")
+        self.append_output(data)
 
     def on_stderr(self):
         """标准错误"""
         data = self.process.readAllStandardError().data().decode("utf-8", errors="replace")
         # 错误信息标红
-        self.append_output(data, "#FF8A80")
+        self.append_output(data)
 
     def on_finished(self, exit_code, exit_status):
         """进程结束"""
@@ -140,20 +140,20 @@ class TerminalWidget(QWidget):
         self.btn_run.setEnabled(True)
 
         if exit_code == 0:
-            self.append_output(f"\n✅ 完成 (退出码: {exit_code})\n", "#69F0AE")
+            self.append_output(f"\n✅ 完成 (退出码: {exit_code})\n")
         else:
-            self.append_output(f"\n⚠️ 退出码: {exit_code}\n", "#FFD54F")
+            self.append_output(f"\n⚠️ 退出码: {exit_code}\n")
 
-        self.append_output("─" * 40 + "\n", "#494949")
+        self.append_output("─" * 40 + "\n")
 
-    def append_output(self, text: str, color: str = "#E0E0E0"):
+    def append_output(self, text: str, color: str = ""):
         """追加带颜色的输出"""
         cursor = self.output.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
 
         # 设置颜色
         fmt = cursor.charFormat()
-        fmt.setForeground(Qt.GlobalColor.white)  # 默认白色
+        # 默认颜色由 QTextCharFormat 继承
 
         self.output.setTextCursor(cursor)
         self.output.insertPlainText(text)
@@ -166,7 +166,7 @@ class TerminalWidget(QWidget):
     def clear_output(self):
         """清空输出"""
         self.output.clear()
-        self.append_output("🖥️ 终端已清空\n", "#03DAC6")
+        self.append_output("🖥️ 终端已清空\n")
 
     def is_running(self) -> bool:
         """检查是否有进程在运行"""
@@ -179,4 +179,4 @@ class TerminalWidget(QWidget):
             self.process.waitForFinished(1000)
             if self.is_running():
                 self.process.kill()
-            self.append_output("\n🛑 进程已终止\n", "#CF6679")
+            self.append_output("\n🛑 进程已终止\n")

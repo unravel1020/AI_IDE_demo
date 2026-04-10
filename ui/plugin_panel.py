@@ -81,10 +81,10 @@ class PluginPanel(QWidget):
             return
 
         # 显示详情
-        html = f"<b style='color:#BB86FC;'>{info['name']}</b><br>"
-        html += f"<span style='color:#A0A0A0;'>版本: {info['version']}</span><br>"
-        html += f"<span style='color:#A0A0A0;'>作者: {info['author']}</span><br>"
-        html += f"<span style='color:#A0A0A0;'>状态: {'已启用' if info['enabled'] else '已禁用'}</span><br><br>"
+        html = f"<b>{info['name']}</b><br>"
+        html += f"<span>版本: {info['version']}</span><br>"
+        html += f"<span>作者: {info['author']}</span><br>"
+        html += f"<span>状态: {'已启用' if info['enabled'] else '已禁用'}</span><br><br>"
         html += f"{info['description']}"
         self.detail_label.setText(html)
 

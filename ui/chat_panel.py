@@ -83,24 +83,7 @@ class ChatMessage(QFrame):
         self.setLayout(layout)
 
         # 根据角色设置背景色 - 使用柔和色调
-        if self.role == "user":
-            self.setStyleSheet("""
-                QFrame {
-                    background-color: #F0EDE8;
-                    border-radius: 10px;
-                    margin: 4px 20px 4px 4px;
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                QFrame {
-                    background-color: #E8F0F0;
-                    border-radius: 10px;
-                    margin: 4px 4px 4px 20px;
-                    border-left: 3px solid #4A9B9B;
-                }
-            """)
-
+        # 样式由全局 QSS 主题控制
     def _format_content(self, text: str) -> str:
         """格式化内容，处理代码块"""
         # 简单处理：将 ``` 代码块标记为 [代码]

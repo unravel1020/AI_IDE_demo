@@ -219,20 +219,20 @@ class SimpleCppHighlighter(QSyntaxHighlighter):
                     "const", "return", "if", "else", "for", "while",
                     "new", "delete", "include", "using", "namespace"]
         keyword_format = QTextCharFormat()
-        keyword_format.setForeground(QColor("#569CD6"))
+        keyword_format.setForeground(QColor("#5B6BB8"))
         for word in keywords:
             self.rules.append((QRegularExpression(f"\\b{word}\\b"), keyword_format))
 
         string_format = QTextCharFormat()
-        string_format.setForeground(QColor("#CE9178"))
+        string_format.setForeground(QColor("#6B8E23"))
         self.rules.append((QRegularExpression(r'"[^"]*"'), string_format))
 
         comment_format = QTextCharFormat()
-        comment_format.setForeground(QColor("#6A9955"))
+        comment_format.setForeground(QColor("#8A9B8C"))
         self.rules.append((QRegularExpression(r"//[^\n]*"), comment_format))
 
         include_format = QTextCharFormat()
-        include_format.setForeground(QColor("#C586C0"))
+        include_format.setForeground(QColor("#5B6BB8"))
         self.rules.append((QRegularExpression(r"#include\s+<[^>]+>"), include_format))
 
     def highlightBlock(self, text):

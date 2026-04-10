@@ -329,7 +329,7 @@ class MainWindow(ElaWindow):
         # 进度标签
         self.progress_label = QLabel("")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.progress_label.setStyleSheet("font-size: 13px; font-weight: 500; padding: 4px;")
+        self.progress_label.setStyleSheet("font-weight: 500; padding: 4px;")
         workbench_layout.addWidget(self.progress_label)
 
         self.addPageNode("工作台", workbench_widget, "Home")
@@ -487,12 +487,12 @@ class MainWindow(ElaWindow):
 
         # 插件消息
         if "_plugin_message" in result:
-            html += f'<p style="color:#69F0AE;">{result.pop("_plugin_message")}</p>'
+            html += f'<p>{result.pop("_plugin_message")}</p>'
         if "_plugin_hello" in result:
-            html += f'<p style="color:#BB86FC;">{result.pop("_plugin_hello")}</p>'
+            html += f'<p>{result.pop("_plugin_hello")}</p>'
         if "_plugin_stats" in result:
             stats = result.pop("_plugin_stats")
-            html += f'<p style="color:#03DAC6;">📊 代码: {stats["total_lines"]}行 | 函数: {stats["functions"]} | 注释: {stats["comment_ratio"]}%</p>'
+            html += f'<p>📊 代码: {stats["total_lines"]}行 | 函数: {stats["functions"]} | 注释: {stats["comment_ratio"]}%</p>'
 
         # 总结
         summary = result.get("summary", "")
@@ -574,10 +574,10 @@ class MainWindow(ElaWindow):
             complexity = h.get("complexity", "unknown")
             summary = h.get("summary", "") or "无摘要"
 
-            html += f'<div style="margin:8px 0; padding:8px; background:#F0EDE8; border-radius:4px;">'
+            html += f'<div style="margin:8px 0; padding:8px; border-radius:4px;">'
             html += f'<b>{op_emoji} {file_name}</b> '
-            html += f'<span style="color:#888;">({total}个问题 | 复杂度:{complexity})</span><br>'
-            html += f'<span style="color:#aaa; font-size:12px;">{summary}</span><br>'
+            html += f'<span>({total}个问题 | 复杂度:{complexity})</span><br>'
+            html += f'<span style="font-size:12px;">{summary}</span><br>'
             html += f'<a href="history:{h_id}">查看详情</a>'
             html += '</div>'
 
@@ -775,10 +775,9 @@ class MainWindow(ElaWindow):
                         "readability", "maintainability", "performance", "suggestions"]:
                 total += len(r.get(key, []))
 
-            color = "#4EC9B0" if total == 0 else "#f48771" if total > 5 else "#dcdcaa"
-            html += f'<div style="margin:6px 0; padding:8px; background:#F0EDE8; border-radius:4px;">'
-            html += f'<b style="color:{color}">{file_name}</b> '
-            html += f'<span style="color:#6B6B6B;">({total}个问题 | 复杂度:{complexity})</span>'
+            html += f'<div style="margin:6px 0; padding:8px; border-radius:4px;">'
+            html += f'<b>{file_name}</b> '
+            html += f'<span>({total}个问题 | 复杂度:{complexity})</span>'
             html += '</div>'
 
         self.tab_analysis.setHtml(html)
