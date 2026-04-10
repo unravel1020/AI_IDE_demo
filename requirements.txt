@@ -1,2 +1,4 @@
 openai>=1.0.0
-PyQt6>=6.4.0
+PyQt6>=6.4.2
+PyQt6-ElaWidgetTools>=0.9.0
+qtawesome>=1.4.0

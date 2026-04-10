@@ -103,8 +103,8 @@ class CodeEditor(QPlainTextEdit):
                 x = self.line_number_area.width() - 8
                 y = top + 5
 
-                painter.setBrush(QColor(200, 80, 80))
-                painter.setPen(QColor(200, 80, 80))
+                painter.setBrush(QColor(220, 60, 60))
+                painter.setPen(QColor(220, 60, 60))
                 painter.drawEllipse(x, y, radius, radius)
 
             block = block.next()
