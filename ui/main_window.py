@@ -251,11 +251,12 @@ class MainWindow(ElaWindow):
         # ---- 编辑器区域：文件树 + 代码编辑器 ----
         editor_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        self.file_tree = FileTree()
+        self.file_tree = FileTree(self)
         self.file_tree.setMaximumWidth(240)
         self.file_tree.file_clicked.connect(self.load_file_from_tree)
 
         self.code_input = CodeEditor()
+        self.code_input.setParent(self)
         self.code_input.setFont(QFont("JetBrains Mono", 12))
         self.highlighter = CppHighlighter(self.code_input.document(), theme="light")
 
@@ -316,12 +317,15 @@ class MainWindow(ElaWindow):
         self.tabs = QTabWidget()
 
         self.tab_analysis = QTextBrowser()
+        self.tab_analysis.setParent(self)
         self.tab_analysis.anchorClicked.connect(self.on_link_clicked)
 
         self.tab_fix = CodeEditor()
+        self.tab_fix.setParent(self)
         self.tab_fix.setReadOnly(True)
 
         self.tab_agent = CodeEditor()
+        self.tab_agent.setParent(self)
         self.tab_agent.setReadOnly(True)
 
         for tab in [self.tab_fix, self.tab_agent]:
@@ -362,6 +366,7 @@ class MainWindow(ElaWindow):
         ai_layout = QVBoxLayout(ai_widget)
         ai_layout.setContentsMargins(8, 8, 8, 8)
         self.chat_panel = ChatPanel()
+        self.chat_panel.setParent(self)
         ai_layout.addWidget(self.chat_panel)
         self.addPageNode("AI助手", ai_widget, "Chat")
 
@@ -369,6 +374,7 @@ class MainWindow(ElaWindow):
         # 页面3: 历史记录
         # =========================
         self.tab_history = QTextBrowser()
+        self.tab_history.setParent(self)
         history_widget = QWidget()
         history_layout = QVBoxLayout(history_widget)
         history_layout.setContentsMargins(8, 8, 8, 8)
@@ -379,6 +385,7 @@ class MainWindow(ElaWindow):
         # 页面4: 代码片段
         # =========================
         self.tab_snippets = SnippetPanel()
+        self.tab_snippets.setParent(self)
         self.tab_snippets.snippet_selected.connect(self.insert_snippet)
         snippets_widget = QWidget()
         snippets_layout = QVBoxLayout(snippets_widget)
@@ -389,7 +396,7 @@ class MainWindow(ElaWindow):
         # =========================
         # 页面5: 终端
         # =========================
-        self.tab_terminal = TerminalWidget()
+        self.tab_terminal = TerminalWidget(self)
         terminal_widget = QWidget()
         terminal_layout = QVBoxLayout(terminal_widget)
         terminal_layout.setContentsMargins(8, 8, 8, 8)
@@ -400,6 +407,7 @@ class MainWindow(ElaWindow):
         # 页面6: 插件
         # =========================
         self.tab_plugins = PluginPanel(self.plugin_manager)
+        self.tab_plugins.setParent(self)
         plugins_widget = QWidget()
         plugins_layout = QVBoxLayout(plugins_widget)
         plugins_layout.setContentsMargins(8, 8, 8, 8)
