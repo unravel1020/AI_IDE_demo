@@ -6,7 +6,7 @@
 from PyQt6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QFileDialog, QMenu, QAbstractItemView
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor
 import os
 
@@ -38,6 +38,12 @@ class FileTree(QTreeWidget):
 
         # 点击事件
         self.itemClicked.connect(self._on_item_clicked)
+
+        # 双击事件
+        self.itemDoubleClicked.connect(self._on_item_double_clicked)
+
+        # 选择模式 - 支持多选
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def apply_theme(self):
         """应用当前主题"""
@@ -71,62 +77,43 @@ class FileTree(QTreeWidget):
         else:
             self.setStyleSheet("")
 
-    def set_code_item_color(self, color: str):
-        """设置代码文件项的前景色（适配主题）"""
-        self._code_color = QColor(color)
-
-        # 双击事件
-        self.itemDoubleClicked.connect(self._on_item_double_clicked)
-
-        # 选择模式 - 支持多选
-        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-
     def set_root_path(self, path: str):
         """设置根目录并刷新树"""
         if path and os.path.isdir(path):
             self.root_path = path
-            self.refresh()
+            # 使用延迟刷新避免 Qt 内部状态问题
+            QTimer.singleShot(10, self._do_refresh)
 
-    def open_folder_dialog(self):
-        """打开文件夹选择对话框"""
-        folder = QFileDialog.getExistingDirectory(
-            None, "选择项目文件夹",
-            options=QFileDialog.Option.DontUseNativeDialog
-        )
-        if folder:
-            self.set_root_path(folder)
-            return folder
-        return None
-
-    def refresh(self):
-        """刷新文件树"""
+    def _do_refresh(self):
+        """实际执行刷新（在延迟后）"""
+        # 安全清除：先 block 信号，再逐层删除
+        self.blockSignals(True)
         try:
-            self.clear()
-            if not self.root_path or not os.path.isdir(self.root_path):
-                return
+            # 手动删除顶层项，而不是 clear()
+            while self.topLevelItemCount() > 0:
+                item = self.takeTopLevelItem(0)
+                del item
+        finally:
+            self.blockSignals(False)
 
-            # 创建根节点
-            root_name = os.path.basename(self.root_path) or self.root_path
-            root_item = QTreeWidgetItem(self)
-            root_item.setText(0, f"📂 {root_name}")
-            root_item.setData(0, Qt.ItemDataRole.UserRole, self.root_path)
-            root_item.setExpanded(True)
+        if not self.root_path or not os.path.isdir(self.root_path):
+            return
 
-            # 递归构建树
-            self._build_tree(self.root_path, root_item)
-        except Exception as e:
-            print(f"[ERROR] FileTree.refresh: {e}")
-            import traceback
-            traceback.print_exc()
+        # 创建根节点
+        root_name = os.path.basename(self.root_path) or self.root_path
+        root_item = QTreeWidgetItem(self)
+        root_item.setText(0, f"📂 {root_name}")
+        root_item.setData(0, Qt.ItemDataRole.UserRole, self.root_path)
+        root_item.setExpanded(True)
+
+        # 递归构建树
+        self._build_tree(self.root_path, root_item)
 
     def _build_tree(self, path: str, parent_item: QTreeWidgetItem):
         """递归构建目录树"""
         try:
             entries = sorted(os.listdir(path))
-        except PermissionError:
-            return
-        except Exception as e:
-            print(f"[ERROR] _build_tree listdir: {e}")
+        except (PermissionError, OSError):
             return
 
         # 先处理文件夹，再处理文件
@@ -149,24 +136,27 @@ class FileTree(QTreeWidget):
 
         # 添加文件夹
         for name, full_path in dirs:
-            try:
-                item = QTreeWidgetItem(parent_item)
-                item.setText(0, f"📁 {name}")
-                item.setData(0, Qt.ItemDataRole.UserRole, full_path)
-                self._build_tree(full_path, item)
-            except Exception as e:
-                print(f"[ERROR] _build_tree dir item: {e}")
+            item = QTreeWidgetItem(parent_item)
+            item.setText(0, f"📁 {name}")
+            item.setData(0, Qt.ItemDataRole.UserRole, full_path)
+            self._build_tree(full_path, item)
 
         # 添加文件
         for name, full_path in files:
-            try:
-                item = QTreeWidgetItem(parent_item)
-                item.setText(0, f"📄 {name}")
-                item.setData(0, Qt.ItemDataRole.UserRole, full_path)
-                # 代码文件用主题强调色（暂时禁用，排查崩溃问题）
-                # item.setForeground(0, QColor("#5B6BB8"))
-            except Exception as e:
-                print(f"[ERROR] _build_tree file item: {e}")
+            item = QTreeWidgetItem(parent_item)
+            item.setText(0, f"📄 {name}")
+            item.setData(0, Qt.ItemDataRole.UserRole, full_path)
+
+    def open_folder_dialog(self):
+        """打开文件夹选择对话框"""
+        folder = QFileDialog.getExistingDirectory(
+            None, "选择项目文件夹",
+            options=QFileDialog.Option.DontUseNativeDialog
+        )
+        if folder:
+            self.set_root_path(folder)
+            return folder
+        return None
 
     def _on_item_clicked(self, item: QTreeWidgetItem, column: int):
         """单击处理"""
@@ -188,7 +178,7 @@ class FileTree(QTreeWidget):
         item = self.itemAt(position)
 
         # 通用操作
-        menu.addAction("🔄 刷新", self.refresh)
+        menu.addAction("🔄 刷新", self._do_refresh)
         menu.addAction("📂 打开文件夹...", self.open_folder_dialog)
 
         if item:
