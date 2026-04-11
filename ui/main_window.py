@@ -472,7 +472,7 @@ class MainWindow(ElaWindow):
 
         # 连接主题变化信号
         ElaTheme.getInstance().themeModeChanged.connect(self.apply_theme)
-        # ElaTheme.getInstance().themeModeChanged.connect(self._save_theme_config)
+        ElaTheme.getInstance().themeModeChanged.connect(self._save_theme_config)
 
         # 应用当前主题
         self.apply_theme()
