@@ -472,7 +472,7 @@ class MainWindow(ElaWindow):
 
         # 连接主题变化信号
         ElaTheme.getInstance().themeModeChanged.connect(self.apply_theme)
-        ElaTheme.getInstance().themeModeChanged.connect(self._save_theme_config)
+        # ElaTheme.getInstance().themeModeChanged.connect(self._save_theme_config)
 
         # 应用当前主题
         self.apply_theme()
@@ -1387,8 +1387,8 @@ class MainWindow(ElaWindow):
             widget.setStyleSheet("padding: 0 8px;")
             self.statusBar().addPermanentWidget(widget)
 
-        # 连接编辑器光标变化信号
-        self.code_input.cursorPositionChanged.connect(self._update_cursor_position)
+        # 连接编辑器光标变化信号（暂时禁用排查崩溃）
+        # self.code_input.cursorPositionChanged.connect(self._update_cursor_position)
 
     def _update_cursor_position(self):
         """更新光标位置显示"""
