@@ -331,6 +331,11 @@ class MainWindow(ElaWindow):
         ]:
             btn.setToolTip(tooltip)
 
+        self.btn_run_code = QPushButton("运行")
+        self.btn_run_code.setIcon(qta.icon('fa5s.play-circle'))
+        self.btn_run_code.setToolTip("编译并运行当前文件 (F5)")
+        self.btn_run_code.clicked.connect(self.on_run_code)
+
         self.btn_analyze.clicked.connect(self.on_analyze)
         self.btn_fix.clicked.connect(self.on_fix)
         self.btn_agent.clicked.connect(self.on_agent)
@@ -338,6 +343,7 @@ class MainWindow(ElaWindow):
         self.btn_batch.clicked.connect(self.on_batch_analyze)
         self.btn_explain.clicked.connect(self.on_explain)
 
+        toolbar_layout.addWidget(self.btn_run_code)
         toolbar_layout.addWidget(self.btn_analyze)
         toolbar_layout.addWidget(self.btn_fix)
         toolbar_layout.addWidget(self.btn_agent)
@@ -938,6 +944,24 @@ class MainWindow(ElaWindow):
         self.progress_label.setText("")
 
     # =========================
+    # 运行代码
+    # =========================
+    def on_run_code(self):
+        """编译并运行当前代码 (F5)"""
+        self._switch_page("终端")
+        self.tab_terminal.compile_and_run()
+
+    def on_compile(self):
+        """编译当前代码 (F6)"""
+        self._switch_page("终端")
+        self.tab_terminal.compile_current()
+
+    def on_run_only(self):
+        """运行编译后的程序 (F7)"""
+        self._switch_page("终端")
+        self.tab_terminal.run_executable()
+
+    # =========================
     # 批量分析
     # =========================
     def on_batch_analyze(self):
@@ -1311,6 +1335,18 @@ class MainWindow(ElaWindow):
         # Ctrl+Shift+R: 项目内搜索（避免与输入法繁体切换冲突）
         shortcut_search = QShortcut(QKeySequence("Ctrl+Shift+R"), self)
         shortcut_search.activated.connect(self.open_search_panel)
+
+        # F5: 编译并运行
+        shortcut_run = QShortcut(QKeySequence("F5"), self)
+        shortcut_run.activated.connect(self.on_run_code)
+
+        # F6: 编译
+        shortcut_compile = QShortcut(QKeySequence("F6"), self)
+        shortcut_compile.activated.connect(self.on_compile)
+
+        # F7: 运行
+        shortcut_run_only = QShortcut(QKeySequence("F7"), self)
+        shortcut_run_only.activated.connect(self.on_run_only)
 
         # Ctrl+F: 查找
         shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self)
