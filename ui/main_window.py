@@ -636,7 +636,7 @@ class MainWindow(ElaWindow):
     def open_file(self):
         try:
             file_path, _ = QFileDialog.getOpenFileName(
-                self, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)",
+                None, "打开C++文件", "", "C++ Files (*.cpp *.h *.hpp)",
                 options=QFileDialog.Option.DontUseNativeDialog
             )
             if file_path:
