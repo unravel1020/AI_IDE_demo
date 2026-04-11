@@ -119,6 +119,8 @@ class SearchPanel(QWidget):
 
         self.setWindowTitle("项目内搜索")
         self.resize(700, 500)
+        # 设置为独立窗口，有边框和标题栏
+        self.setWindowFlags(Qt.WindowType.Window)
         self.init_ui()
 
     def init_ui(self):
