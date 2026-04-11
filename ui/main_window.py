@@ -607,6 +607,7 @@ class MainWindow(ElaWindow):
     # 按钮状态管理
     # =========================
     def set_buttons_enabled(self, enabled: bool):
+        self.btn_run_code.setEnabled(enabled)
         self.btn_analyze.setEnabled(enabled)
         self.btn_fix.setEnabled(enabled)
         self.btn_agent.setEnabled(enabled)
@@ -646,13 +647,23 @@ class MainWindow(ElaWindow):
                 options=QFileDialog.Option.DontUseNativeDialog
             )
             if file_path:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    self.code_input.setPlainText(f.read())
-                self.tab_terminal.set_current_file(file_path)
-                self._update_file_info(file_path)
-                self.update_status(f"已打开: {os.path.basename(file_path)}")
+                # 延迟加载，避免 QFileDialog 关闭后立即操作编辑器
+                QTimer.singleShot(10, lambda: self._load_file_content(file_path))
         except Exception as e:
             print(f"[ERROR] open_file: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _load_file_content(self, file_path: str):
+        """实际加载文件内容"""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                self.code_input.setPlainText(f.read())
+            self.tab_terminal.set_current_file(file_path)
+            self._update_file_info(file_path)
+            self.update_status(f"已打开: {os.path.basename(file_path)}")
+        except Exception as e:
+            print(f"[ERROR] _load_file_content: {e}")
             import traceback
             traceback.print_exc()
 
