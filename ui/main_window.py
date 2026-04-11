@@ -473,7 +473,6 @@ class MainWindow(ElaWindow):
         # 连接主题变化信号
         ElaTheme.getInstance().themeModeChanged.connect(self.apply_theme)
         # 使用 QueuedConnection 避免在信号处理中直接操作文件
-        from PyQt6.QtCore import Qt
         ElaTheme.getInstance().themeModeChanged.connect(
             self._save_theme_config, Qt.ConnectionType.QueuedConnection)
 
