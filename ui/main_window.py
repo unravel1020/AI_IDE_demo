@@ -1308,8 +1308,8 @@ class MainWindow(ElaWindow):
         shortcut_batch = QShortcut(QKeySequence("Ctrl+B"), self)
         shortcut_batch.activated.connect(self.on_batch_analyze)
 
-        # Ctrl+Shift+F: 项目内搜索
-        shortcut_search = QShortcut(QKeySequence("Ctrl+Shift+F"), self)
+        # Ctrl+Shift+R: 项目内搜索（避免与输入法繁体切换冲突）
+        shortcut_search = QShortcut(QKeySequence("Ctrl+Shift+R"), self)
         shortcut_search.activated.connect(self.open_search_panel)
 
         # Ctrl+F: 查找
